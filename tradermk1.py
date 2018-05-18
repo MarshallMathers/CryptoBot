@@ -10,18 +10,21 @@ from catalyst.exchange.utils.stats_utils import extract_transactions
 
 NAMESPACE = 'bollinger_bands'
 log = Logger(NAMESPACE)
-
+upperPiv=0
+lowerPiv=0
 
 def initialize(context):
 	context.i = 0
 	context.asset = symbol('ltc_usd')
 	context.base_price = None
+	context.upPiv = 0
+	context.lowPiv = 0
 
 
 def handle_data(context, data):
 	# define the windows for the moving averages
 	short_window = 50
-	long_window = 400
+	long_window = 500
 
 	# Skip as many bars as long_window to properly compute the average
 	context.i += 1
@@ -33,26 +36,30 @@ def handle_data(context, data):
 	# minute bars for this simulation -> freq="1m"
 	# Returns a pandas dataframe.
 
-	nf = 400
-	close = data.history(context.asset,'close',bar_count=nf,frequency='1T')
-	low = data.history(context.asset,'low',bar_count=nf,frequency='1T')
-	high = data.history(context.asset,'high',bar_count=nf,frequency='1T')
+	close = data.history(context.asset,'close',bar_count=long_window,frequency='1T')
+	low = data.history(context.asset,'low',bar_count=long_window,frequency='1T')
+	high = data.history(context.asset,'high',bar_count=long_window,frequency='1T')
 	price = data.current(context.asset, 'price')
 	
 	#bbh = ta.volatility.bollinger_hband(close,n=nf)
 	#bbl = ta.volatility.bollinger_lband(close,n=nf)
 	#currBBH = bbh[-1]
 	#currBBL = bbl[-1]
-	
-	currHigh  = high.mean()
-	currLow   = low.mean()
-	currClose = close.mean()
-	currPiv = (currHigh+currLow+currClose) / 3
-	highPiv = (2 * currPiv) - currLow
-	lowPiv  = (2 * currPiv) - currHigh
-	lowPiv2 = currPiv-()
-	highPiv2
-	
+	if(context.i%long_window==0 or context.i==long_window):
+		currHigh  = high.mean()
+		currLow   = low.mean()
+		currClose = close.mean()
+		currPiv = (currHigh+currLow+currClose) / 3
+		highPiv = (2 * currPiv) - currLow
+		lowPiv  = (2 * currPiv) - currHigh
+		lowPiv2 = currPiv-2*(currHigh-currLow)
+		highPiv2 = currPiv+2*(currHigh-currLow)
+		context.lowPiv = lowPiv2
+		context.upPiv  = highPiv2
+		
+	#else:
+	#	highPiv = upperPiv
+	#	lowPiv = lowerPiv
 	# Let's keep the price of our asset in a more handy variable
 
 	# If base_price is not set, we use the current value. This is the
@@ -65,8 +72,8 @@ def handle_data(context, data):
 	record(price=price,
 		   cash=context.portfolio.cash,
 		   price_change=price_change,
-		   short_dvg=highPiv,
-		   long_mavg=highPiv)
+		   short_mavg=context.upPiv,
+		   long_mavg=context.lowPiv)
 	
 	# Since we are using limit orders, some orders may not execute immediately
 	# we wait until all orders are executed before considering more trades.
@@ -82,9 +89,9 @@ def handle_data(context, data):
 	pos_amount = context.portfolio.positions[context.asset].amount
 
 	# Trading logic
-	if price < lowPiv  and pos_amount == 0:
+	if price < context.lowPiv  and pos_amount == 0:
 		order_target_percent(context.asset, 1)
-	if price > highPiv and pos_amount > 0:
+	if price > context.upPiv and pos_amount > 0:
 		order_target_percent(context.asset, 0)
 		
 	
