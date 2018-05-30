@@ -5,7 +5,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from keras.models import Sequential
+from keras.layers import Dropout
+from keras.layers import Dense
+from keras import optimizers
 
+def shuffleLists(l1,l2):
+	rng=np.random.get_state()
+	np.random.shuffle(l1)
+	np.random.set_state(rng)
+	np.random.shuffle(l2)
+	return l1,l2
 def aggregate(fn,sStep,eStep):
 	nd = re.compile(r'[^\d.]+')
 	f = open(fn)
@@ -41,7 +51,7 @@ def aggregate(fn,sStep,eStep):
 					else:
 						t[i] = float(tmp)
 		
-		if t[0] > tme + stepSize:
+		if t[0] >= tme + stepSize:
 			outData.append(currData)
 			tme += stepSize
 			currData = [0] * 6
@@ -68,57 +78,76 @@ def aggregate(fn,sStep,eStep):
 #tf: timeframe to identify signals
 #st: start time
 #
-def getSignal(data,tf,st):
-	emaN = 26
-	atrN = 14
-	bbN  = 8
-	f, (ax1,ax2,ax3,ax4) = plt.subplots(4)
-	if st>=emaN:
-		emaCloseData=pd.Series(data[4][st-emaN:st+tf])
-		ema = ta.trend.ema_slow(emaCloseData,n_slow=emaN)
-		startPrice = emaCloseData[atrN-1]
-		print(len(emaCloseData[emaN:]))
-		print(len(emaCloseData))
-		ax1.plot(emaCloseData,color='tab:blue')
-		ax1.plot(ema,color='tab:green')
-		
-	if st>=atrN:
-		atrCloseData=pd.Series(data[4][st-atrN:st+tf])
-		atrHighData=pd.Series(data[2][st-atrN:st+tf])
-		atrLowData=pd.Series(data[1][st-atrN:st+tf])
-		atr = ta.volatility.average_true_range(atrHighData,atrLowData,atrCloseData,n=atrN)
-		
-		ax2.plot(atr,color='tab:red')
+def getSignal(data1,data2,data3,tf,st):
+	high=data1[st:st+tf]
+	low=data2[st:st+tf]
+	close=data3[st:st+tf]
+	startPrice=close[0]
+	thPrice=startPrice*1.07
+	tlPrice=startPrice*0.93	
 	
-	if st>=bbN:
-		bbCloseData=pd.Series(data[4][st-bbN:st+tf])
-		bbHighData=pd.Series(data[2][st-bbN:st+tf])
-		bbLowData=pd.Series(data[1][st-bbN:st+tf])
-		bbh = ta.volatility.keltner_channel_hband(bbHighData,bbLowData,bbCloseData,n=bbN)
-		bbl = ta.volatility.keltner_channel_lband(bbHighData,bbLowData,bbCloseData,n=bbN)
-		bbc = ta.volatility.keltner_channel_central(bbHighData,bbLowData,bbCloseData,n=bbN)
-		
-		ax3.plot(bbCloseData[bbN:],color='tab:blue')
-		ax3.plot(bbh,color='tab:red')
-		ax3.plot(bbl,color='tab:red')
-		
-		ax4.plot(bbc,color='tab:blue')
-		ax4.plot(bbh,color='tab:red')
-		ax4.plot(bbl,color='tab:red')
+	totl = 0
+	toth = 0
+	#print(tlPrice, thPrice)
 	
-	plt.show()
-	
+	for i in range(len(high)):
+		if high[i] > thPrice:
+			toth+=1
+		if low[i] < tlPrice:
+			totl+=1
 
+	
+	if toth>totl:
+		return np.array([1,0])#buy
+	elif toth<totl:
+		return np.array([0,1])#sell
+	else:
+		return np.array([0,0])#hodl
+
+def getSignal2(data1,data2,data3,tf,st):
+	high=data1[st:st+tf]
+	low=data2[st:st+tf]
+	close=data3[st:st+tf]
+	startPrice=close[0]
+	thPrice=startPrice*1.02
+	tlPrice=startPrice*0.98
+
+	#print(tlPrice, thPrice)
+	new = []
+	for i in range(len(high)):
+		new.append([high[i],low[i]])
+	for i in range(len(new)):
+		if new[i][1] < tlPrice:
+			return np.array([0,1])#sell
+		if new[i][0] > thPrice:
+			#print(new[i][0],thPrice)
+			return np.array([1,0])#buy
+		
+	return np.array([0,0])#hodl
+	
+def normalize(inData):
+	std=np.std(inData)
+	mean=np.mean(inData)
+	out=[]
+	for i in range(len(inData)):
+		t = ((inData[i]-mean)/std)
+		out.append(t)
+	return np.array(out)
+
+	
+#Data to aggregate
 base = 'priceData/'
 year = '2017'
 pair='BTC-USD'
 month = '1'
-totalMonth = 7
+totalMonth = 12
 tdata = [[],[],[],[],[],[]]
 
 for i in range(totalMonth):
+	
 	tmp = base+year + '/' + pair + month + 'min.data'
-	currData = aggregate(tmp,1,5)
+	currData = aggregate(tmp,1,1)
+	
 	print(tmp)
 	
 	for i in range(int(len(currData))):
@@ -131,16 +160,189 @@ for i in range(totalMonth):
 		year = str(int(year)+1)
 
 
+
+csTime = 4
+startTime = 144
+startMin = csTime*startTime
+
 #tme = pd.Series(data[0])
 #low = pd.Series(data[1])
 #high = pd.Series(data[2])
 #open = pd.Series(data[3])
 #close = pd.Series(data[4])
 #volume = pd.Series(data[5])
-data = pd.Series(tdata)
 
-for i in range(20):
-	getSignal(data,100,1000*(i+1))
-print(len(data[0]))
+data = tdata
+#signals to collect for NN	
+#keltner uppand and lower
+keltN = 15 * csTime
+#RSI
+rsiN=14 * csTime
+#EMA fast and EMA slow
+emaFN = 12 * csTime
+emaSN = 26 * csTime
+#macd slow and fast N
+macdFN = 12 * csTime
+macdSN = 26 * csTime
+#vortex Indicator
 
 
+ichin1 = 9 * csTime
+ichin2 = 26 * csTime
+ichin3 = 52 * csTime
+
+mN = max([keltN,rsiN,emaFN,emaSN,macdFN,macdSN,ichin1,ichin2,ichin3])
+print(mN)
+inData=[[],[],[],[],[],[],[],[],[]]
+print(len(data[4]))
+close = pd.Series(data[4])
+high  = pd.Series(data[2])
+low   = pd.Series(data[1])
+
+
+#close = inData[0]
+inData[0] = np.array(list(data[4]))
+#print(inData[0])
+#rsi  = inData[1]
+inData[1] = np.array(list(ta.momentum.rsi(close,n=rsiN)))
+#emaF = inData[2]
+inData[2] = np.array(list(ta.trend.ema_fast(close,n_fast=emaFN)))
+#emaS = inData[3]
+inData[3] = np.array(list(ta.trend.ema_slow(close,n_slow=emaSN)))
+#keltH = inData[4]
+inData[4] = np.array(list(ta.volatility.keltner_channel_hband(high, low, close, n=keltN)))
+#keltL = inData[5]
+inData[5] = np.array(list(ta.volatility.keltner_channel_lband(high, low, close, n=keltN)))
+#MACD
+inData[6] = np.array(list(ta.trend.macd(close, n_fast=macdFN,n_slow=macdSN)))
+#Mass Index
+inData[7] =np.array(list(ta.trend.mass_index(high, low, n=9*csTime, n2=25*csTime)))
+#TRIX
+inData[8] = np.array(list(ta.trend.trix(close, n=15*csTime)))
+
+
+high = np.array(list(high))#used foy Y data
+low = np.array(list(low))#used foy Y data
+close = np.array(list(close))#used foy Y data
+
+#trim all data to length of longest set, which it Slow EMA N
+data=[[],[],[],[],[],[],[],[],[]]
+for i in range(len(data)):
+	data[i]=inData[i][mN:]
+#for i in range(len(data)):
+#	data[i]=normalize(inData[i])
+	
+#input layer of NN
+#6 features with 4 timestamps each, for a total of 24 input nodes
+#(close[0,15,30,60],RSI[0,15,30,60],EMAF[0,15,30,60],EMAS[0,15,30,60],KeltH[0,15,30,60],KeltH[0,15,30,60])
+
+#output layer is simple 2 node ouput
+#(1,0) buy signal
+#(0,1) sell signal
+#(0,0) neutral
+
+xData = []
+yData = []
+
+patt=[0,5,10,15]
+
+for i in range(startMin,len(data[0]),50):
+	currX = []
+	for j in data:
+		tmpx = normalize(j[i-startMin:i])
+		for k in patt:
+			currX.append(tmpx[startMin-k-1])
+	#print(currX)
+	currY=getSignal(high,low,close,720,i)
+	xData.append(np.array(currX))
+	yData.append(np.array(currY))
+
+xData=np.array(xData)
+yData=np.array(yData)
+t1x=[];t1y=[];t2x=[];t2y=[];t3x=[];t3y=[];
+for i in range(len(xData)):
+	if yData[i][0] == 1:
+		t1x.append(xData[i])
+		#t1y.append([1])
+		t1y.append(yData[i])
+	elif yData[i][1] == 1:
+		t2x.append(xData[i])
+		#t2y.append([0])
+		t2y.append(yData[i])
+	else:
+		t3x.append(xData[i])
+		#t3y.append([0.5])
+		t3y.append(yData[i])
+		
+		
+t = [len(t1x),len(t2x),len(t3x)]
+print(t)
+tm = min(t)-1
+print(tm)
+
+t1x,t1y = shuffleLists(t1x,t1y)
+t2x,t2y = shuffleLists(t2x,t2y)
+t3x,t3y = shuffleLists(t3x,t3y)
+
+newXData = []
+newYData = []
+
+for i in range(tm):
+	newXData.append(t1x[i])
+	newXData.append(t2x[i])
+	newXData.append(t3x[i])
+	
+	newYData.append(t1y[i])
+	newYData.append(t2y[i])
+	newYData.append(t3y[i])
+
+newXData = np.array(newXData)
+newYData = np.array(newYData)
+
+newXData,newYData = shuffleLists(newXData,newYData)
+
+testSize=int(len(newXData)/20)
+
+trainX = newXData[testSize:]
+trainY = newYData[testSize:]
+
+testX  = newXData[:testSize]
+testY  = newYData[:testSize]
+
+print()
+print(len(testY))
+print(len(testX))
+print()
+print(len(trainX))
+print(len(trainY))
+print()
+################################################
+#Keras time!!
+################################################
+
+#define 
+model = Sequential()
+model.add(Dense(32, input_dim=36, activation='relu'))
+
+#model.add(Dropout(0.25))
+#model.add(Dense(10, activation='relu'))
+#model.add(Dropout(0.25))
+model.add(Dense(2, activation='sigmoid'))
+
+
+sgd = optimizers.adam(lr=0.001)
+model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
+
+model.fit(trainX,trainY,epochs=100,batch_size=25)
+
+
+scores=model.evaluate(testX,testY)
+print("\n%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+
+model_json = model.to_json()
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+# serialize weights to HDF5
+model.save_weights("model.h5")
+print("Saved model to disk")
