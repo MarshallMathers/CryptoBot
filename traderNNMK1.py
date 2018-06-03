@@ -16,8 +16,8 @@ NAMESPACE = 'bollinger_bands'
 log = Logger(NAMESPACE)
 
 def normalize(inData):
-	std=np.std(inData)
-	mean=np.mean(inData)
+	std = np.std(inData)
+	mean = np.mean(inData)
 	out=[]
 	for i in range(len(inData)):
 		t = ((inData[i]-mean)/std)
@@ -38,11 +38,12 @@ def initialize(context):
 	context.lastTrade=0
 	print("Loaded model from disk")
 	
+	
 def handle_data(context, data):
 #	start = time.time()
 	#NN was trained with 15 min CandleSticks
 	csTime=4
-	startTime = 144
+	startTime = 288
 	startMin = csTime*startTime
 	
 	#signals to collect for NN	
@@ -80,74 +81,72 @@ def handle_data(context, data):
 	# Exit if we cannot trade
 	if not data.can_trade(context.asset):
 		return
+	pattern=[0,1,2,3,4,5,6,7,8,9]
+	mN = max([keltN,rsiN,emaFN,emaSN,macdFN,macdSN,ichin1,ichin2,ichin3])
+	mN2 = max(pattern)
 	close = data.history(context.asset,'close',bar_count=startMin,frequency='1T')
 	low = data.history(context.asset,'low',bar_count=startMin,frequency='1T')
 	high = data.history(context.asset,'high',bar_count=startMin,frequency='1T')
 	price = data.current(context.asset, 'price')
 	
-	mN = max([keltN,rsiN,emaFN,emaSN,macdFN,macdSN,ichin1,ichin2,ichin3])
-	inData=[[],[],[],[],[],[],[],[],[]]
+	inData=[[],[],[],[],[],[],[]]
+	
 	
 	#close = inData[0]
 	inData[0] = np.array(close)
-	
-	
 	#print(inData[0])
 	#rsi  = inData[1]
 	inData[1] = np.array(ta.momentum.rsi(close,n=rsiN))
-	
 	#emaF = inData[2]
 	inData[2] = np.array(ta.trend.ema_fast(close,n_fast=emaFN))
-	
 	#emaS = inData[3]
 	inData[3] = np.array(ta.trend.ema_slow(close,n_slow=emaSN))
-	
 	#keltH = inData[4]
 	inData[4] = np.array(ta.volatility.keltner_channel_hband(high, low, close, n=keltN))
-	
 	#keltL = inData[5]
 	inData[5] = np.array(ta.volatility.keltner_channel_lband(high, low, close, n=keltN))
-	
-
+	#MACD
 	inData[6] = np.array(ta.trend.macd(close, n_fast=macdFN,n_slow=macdSN))
-	
-	inData[7] =np.array(list(ta.trend.mass_index(high, low, n=9*csTime, n2=25*csTime)))
+#	#Vortex Pos
+#	inData[7] = np.array(ta.trend.adx_neg(high, low, close, n=14*csTime))
+#	#Vortex Neg
+#	inData[8] = np.array(ta.trend.adx_pos(high, low, close, n=14*csTime))
 
-	inData[8] = np.array(list(ta.trend.trix(close, n=15*csTime)))
-	
 	#used for output of NN ony
 	
-	
-	tData=[[],[],[],[],[],[],[],[],[]]
+	#stdList,meanList = readStatsFromFile('stats.stats')
+	#print(stdList)
+	tData=[[],[],[],[],[],[],[]]
 	for i in range(len(inData)):
 		tData[i]=normalize(inData[i][mN:])
 	#for i in range(len(tData)):
 	#	tData[i]=normalize(inData[i])
 	x = []
-	pattern=[0,5,10,15]
+	
 
 	for i in range(len(tData)):
 		for j in pattern:
-			x.append(tData[i][(j)])
+			x.append(tData[i][len(tData[i])-j-1])
 	npx = np.array(x)
-	npx = npx.reshape((1,36))
-	#print(np.shape(npx))
+	npx = npx.reshape((1,70))
 	y = context.model.predict_on_batch(npx)
 	
 	y = y[0]
-	#print(y)
+#	if context.i % 10 ==0:
+#		print(y)
+	t1=0
+	t2=0
 #	if y[0] > y[1]:
 #		t1=1
 #		t2=0
 #	if y[0] < y[1]:
 #		t1=0
 #		t2=1
-#	else:
-#		t1=0
-#		t2=0
+	
+		
 
-#	sellVal = 0.25
-#	buyVal = 0.75
+#	sellVal = -0.5
+#	buyVal = 0.5
 #	if y>buyVal:
 #		t1=1
 #		t2=0
@@ -157,9 +156,15 @@ def handle_data(context, data):
 #	else:
 #		t1=0
 #		t2=0
-		
-	t1 = 1 if y[0] > 0.5 else 0
-	t2 = 1 if y[1] > 0.5 else 0
+#		
+#	t1 = 1 if y[0] > 0.5 else 0
+#	t2 = 1 if y[1] > 0.5 else 0
+
+	t2 = 1 if y[0] > 0 else 0
+	t1 = 1 if y[1] > 0 else 0
+	
+#	t1 = 1 if y[1] > 0.5 else 0
+#	t2 = 1 if y[0] > 0.5 else 0
 	
 	
 	#t1=0
@@ -283,6 +288,6 @@ if __name__ == '__main__':
 			exchange_name='bitfinex',
 			algo_namespace=NAMESPACE,
 			base_currency='usd',
-			start=pd.to_datetime('2018-1-6', utc=True),
-			end=pd.to_datetime('2018-1-12', utc=True),
+			start=pd.to_datetime('2018-2-1', utc=True),
+			end=pd.to_datetime('2018-2-28', utc=True),
 		)

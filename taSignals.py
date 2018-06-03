@@ -78,52 +78,31 @@ def aggregate(fn,sStep,eStep):
 #tf: timeframe to identify signals
 #st: start time
 #
-def getSignal(data1,data2,data3,tf,st):
-	high=data1[st:st+tf]
-	low=data2[st:st+tf]
-	close=data3[st:st+tf]
-	startPrice=close[0]
-	thPrice=startPrice*1.07
-	tlPrice=startPrice*0.93	
+def getSignal3(data1,data2,data3,tf,st):
 	
-	totl = 0
-	toth = 0
+	n = 26*2
+	high=data1[st-n:st+tf]
+	low=data2[st-n:st+tf]
+	close=data3[st-n:st+tf]
+	ema = np.array(ta.trend.ema_fast(pd.Series(close),n_fast=n))
+	o = np.array(ta.others.cumulative_return(pd.Series(close)))
+	high = high[n:]
+	low = low[n:]
+	close = close[n:]
+	ema = ema[n:]
+	o = o[n:]
+	startPrice=ema[0]
+	tot=0
+	for i in range(len(close)):
+		t = close[i]-ema[i]
+		tot+=t
+#	print(tot)
+	#print(o)
+	#plt.plot(o)
+	#plt.show()
+	return np.mean(o)
 	#print(tlPrice, thPrice)
 	
-	for i in range(len(high)):
-		if high[i] > thPrice:
-			toth+=1
-		if low[i] < tlPrice:
-			totl+=1
-
-	
-	if toth>totl:
-		return np.array([1,0])#buy
-	elif toth<totl:
-		return np.array([0,1])#sell
-	else:
-		return np.array([0,0])#hodl
-
-def getSignal2(data1,data2,data3,tf,st):
-	high=data1[st:st+tf]
-	low=data2[st:st+tf]
-	close=data3[st:st+tf]
-	startPrice=close[0]
-	thPrice=startPrice*1.02
-	tlPrice=startPrice*0.98
-
-	#print(tlPrice, thPrice)
-	new = []
-	for i in range(len(high)):
-		new.append([high[i],low[i]])
-	for i in range(len(new)):
-		if new[i][1] < tlPrice:
-			return np.array([0,1])#sell
-		if new[i][0] > thPrice:
-			#print(new[i][0],thPrice)
-			return np.array([1,0])#buy
-		
-	return np.array([0,0])#hodl
 	
 def normalize(inData):
 	std=np.std(inData)
@@ -132,6 +111,7 @@ def normalize(inData):
 	for i in range(len(inData)):
 		t = ((inData[i]-mean)/std)
 		out.append(t)
+	#print(std, mean)
 	return np.array(out)
 
 	
@@ -193,7 +173,7 @@ ichin3 = 52 * csTime
 
 mN = max([keltN,rsiN,emaFN,emaSN,macdFN,macdSN,ichin1,ichin2,ichin3])
 print(mN)
-inData=[[],[],[],[],[],[],[],[],[]]
+inData=[[],[],[],[],[],[],[]]
 print(len(data[4]))
 close = pd.Series(data[4])
 high  = pd.Series(data[2])
@@ -216,9 +196,9 @@ inData[5] = np.array(list(ta.volatility.keltner_channel_lband(high, low, close, 
 #MACD
 inData[6] = np.array(list(ta.trend.macd(close, n_fast=macdFN,n_slow=macdSN)))
 #Mass Index
-inData[7] =np.array(list(ta.trend.mass_index(high, low, n=9*csTime, n2=25*csTime)))
+#inData[7] =np.array(list(ta.trend.mass_index(high, low, n=9*csTime, n2=25*csTime)))
 #TRIX
-inData[8] = np.array(list(ta.trend.trix(close, n=15*csTime)))
+#inData[8] = np.array(list(ta.trend.trix(close, n=15*csTime)))
 
 
 high = np.array(list(high))#used foy Y data
@@ -226,7 +206,7 @@ low = np.array(list(low))#used foy Y data
 close = np.array(list(close))#used foy Y data
 
 #trim all data to length of longest set, which it Slow EMA N
-data=[[],[],[],[],[],[],[],[],[]]
+data=[[],[],[],[],[],[],[]]
 for i in range(len(data)):
 	data[i]=inData[i][mN:]
 #for i in range(len(data)):
@@ -244,41 +224,47 @@ for i in range(len(data)):
 xData = []
 yData = []
 
-patt=[0,5,10,15]
+patt=[0,1,2,3,4,5,6,7,8,9]
 
-for i in range(startMin,len(data[0]),50):
+
+for i in range(startMin,len(data[0]),25):
 	currX = []
 	for j in data:
 		tmpx = normalize(j[i-startMin:i])
 		for k in patt:
 			currX.append(tmpx[startMin-k-1])
 	#print(currX)
-	currY=getSignal(high,low,close,720,i)
+	currY=getSignal3(high,low,close,180,i)
 	xData.append(np.array(currX))
 	yData.append(np.array(currY))
 
 xData=np.array(xData)
 yData=np.array(yData)
+yData = normalize(yData)
+
 t1x=[];t1y=[];t2x=[];t2y=[];t3x=[];t3y=[];
-for i in range(len(xData)):
-	if yData[i][0] == 1:
+for i in range(len(yData)):
+	#print(yData[i])
+	if yData[i] > 1:
 		t1x.append(xData[i])
 		#t1y.append([1])
-		t1y.append(yData[i])
-	elif yData[i][1] == 1:
+		#t1y.append(yData[i])
+		t1y.append([1,-1])
+	elif yData[i] < -1:
 		t2x.append(xData[i])
-		#t2y.append([0])
-		t2y.append(yData[i])
+		#t2y.append([-1])
+		#t2y.append(yData[i])
+		t2y.append([-1,1])
 	else:
 		t3x.append(xData[i])
-		#t3y.append([0.5])
-		t3y.append(yData[i])
+		#t3y.append([0])
+		#t3y.append(yData[i])
+		t3y.append([0,0])
 		
 		
 t = [len(t1x),len(t2x),len(t3x)]
 print(t)
 tm = min(t)-1
-print(tm)
 
 t1x,t1y = shuffleLists(t1x,t1y)
 t2x,t2y = shuffleLists(t2x,t2y)
@@ -289,11 +275,12 @@ newYData = []
 
 for i in range(tm):
 	newXData.append(t1x[i])
-	newXData.append(t2x[i])
-	newXData.append(t3x[i])
-	
 	newYData.append(t1y[i])
+	
+	newXData.append(t2x[i])
 	newYData.append(t2y[i])
+	
+	newXData.append(t3x[i])
 	newYData.append(t3y[i])
 
 newXData = np.array(newXData)
@@ -309,31 +296,22 @@ trainY = newYData[testSize:]
 testX  = newXData[:testSize]
 testY  = newYData[:testSize]
 
-print()
-print(len(testY))
-print(len(testX))
-print()
-print(len(trainX))
-print(len(trainY))
-print()
 ################################################
 #Keras time!!
 ################################################
 
 #define 
 model = Sequential()
-model.add(Dense(32, input_dim=36, activation='relu'))
-
-#model.add(Dropout(0.25))
-#model.add(Dense(10, activation='relu'))
-#model.add(Dropout(0.25))
-model.add(Dense(2, activation='sigmoid'))
+model.add(Dense(128, input_dim=70, activation='relu'))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.25))
+model.add(Dense(2, activation='tanh'))
 
 
-sgd = optimizers.adam(lr=0.001)
-model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
+sgd = optimizers.sgd(lr=0.00001)
+model.compile(optimizer=sgd,loss='logcosh',metrics=['accuracy'])
 
-model.fit(trainX,trainY,epochs=100,batch_size=25)
+model.fit(trainX,trainY,epochs=100,batch_size=10)
 
 
 scores=model.evaluate(testX,testY)
