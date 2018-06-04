@@ -38,8 +38,8 @@ def initialize(context):
     context.base_price = None
     context.current_day = None
 
-    context.RSI_OVERSOLD = 60
-    context.RSI_OVERBOUGHT = 70
+    context.RSI_OVERSOLD = 26
+    context.RSI_OVERBOUGHT = 72
     context.CANDLE_SIZE = '15T'
 
     context.start_time = time.time()
@@ -85,7 +85,7 @@ def handle_data(context, data):
     # We need a variable for the current price of the security to compare to
     # the average. Since we are requesting two fields, data.current()
     # returns a DataFrame with
-    current = data.current(context.market, fields=['close', 'volume'])
+    current = data.current(context.asset, fields=['close', 'volume'])
     price = current['close']
 
     # If base_price is not set, we use the current value. This is the
@@ -122,14 +122,14 @@ def handle_data(context, data):
         return
 
     # Exit if we cannot trade
-    if not data.can_trade(context.market):
+    if not data.can_trade(context.asset):
         return
 
     # Another powerful built-in feature of the Catalyst backtester is the
     # portfolio object.  The portfolio object tracks your positions, cash,
     # cost basis of specific holdings, and more.  In this line, we calculate
     # how long or short our position is at this minute.
-    pos_amount = context.portfolio.positions[context.market].amount
+    pos_amount = context.portfolio.positions[context.asset].amount
 
     if rsi[-1] <= context.RSI_OVERSOLD and pos_amount == 0:
         log.info(
@@ -140,7 +140,7 @@ def handle_data(context, data):
         # Set a style for limit orders,
         limit_price = price * 1.005
         order_target_percent(
-            context.market, 1, limit_price=limit_price
+            context.asset, 1, limit_price=limit_price
         )
         context.traded_today = True
 
@@ -152,7 +152,7 @@ def handle_data(context, data):
         )
         limit_price = price * 0.995
         order_target_percent(
-            context.market, 0, limit_price=limit_price
+            context.asset, 0, limit_price=limit_price
         )
         context.traded_today = True
 
@@ -162,8 +162,8 @@ def analyze(context=None, perf=None):
     log.info('elapsed time: {}'.format(end - context.start_time))
 
     # The quote currency of the algo exchange
-    quote_currency = list(context.exchanges.values())[0].quote_currency.upper()
-
+    quote_currency = list(context.exchanges.values())[0].base_currency.upper()
+    
     # Plot the portfolio value over time.
     ax1 = plt.subplot(611)
     perf.loc[:, 'portfolio_value'].plot(ax=ax1)
@@ -174,7 +174,7 @@ def analyze(context=None, perf=None):
     perf.loc[:, 'price'].plot(ax=ax2, label='Price')
 
     ax2.set_ylabel('{asset}\n({quote})'.format(
-        asset=context.market.symbol, quote=quote_currency
+        asset=context.asset.symbol, quote=quote_currency
     ))
 
     transaction_df = extract_transactions(perf)
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                 algo_namespace=NAMESPACE,
                 base_currency='usd',
                 start=pd.to_datetime('2017-09-01', utc=True),
-                end=pd.to_datetime('2017-10-10', utc=True),
+                end=pd.to_datetime('2017-09-11', utc=True),
                 #live_graph=False,
                 #simulate_orders=False,
                 #stats_output=None,
