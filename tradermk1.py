@@ -180,6 +180,6 @@ if __name__ == '__main__':
 			exchange_name='bitfinex',
 			algo_namespace=NAMESPACE,
 			base_currency='usd',
-			start=pd.to_datetime('2017-9-18', utc=True),
+			start=pd.to_datetime('2017-8-18', utc=True),
 			end=pd.to_datetime('2017-9-19', utc=True),
 		)
