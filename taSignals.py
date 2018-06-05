@@ -78,30 +78,18 @@ def aggregate(fn,sStep,eStep):
 #tf: timeframe to identify signals
 #st: start time
 #
-def getSignal3(data1,data2,data3,tf,st):
+def getSignal3(data1,tf,st):
 	
-	n = 26*2
-	high=data1[st-n:st+tf]
-	low=data2[st-n:st+tf]
-	close=data3[st-n:st+tf]
-	ema = np.array(ta.trend.ema_fast(pd.Series(close),n_fast=n))
-	o = np.array(ta.others.cumulative_return(pd.Series(close)))
-	high = high[n:]
-	low = low[n:]
-	close = close[n:]
-	ema = ema[n:]
-	o = o[n:]
-	startPrice=ema[0]
-	tot=0
-	for i in range(len(close)):
-		t = close[i]-ema[i]
-		tot+=t
-#	print(tot)
-	#print(o)
-	#plt.plot(o)
-	#plt.show()
-	return np.mean(o)
-	#print(tlPrice, thPrice)
+	close=data1[st:st+tf]
+	sp = close[0]
+	tl = sp* 0.985
+	th = sp* 1.02
+	for i in close:
+		if i > th:
+			return np.array([1,0,0])
+		elif i < tl:
+			return np.array([0,0,1])
+	return np.array([0,1,0])
 	
 	
 def normalize(inData):
@@ -234,32 +222,33 @@ for i in range(startMin,len(data[0]),25):
 		for k in patt:
 			currX.append(tmpx[startMin-k-1])
 	#print(currX)
-	currY=getSignal3(high,low,close,180,i)
+	currY=getSignal3(close,120,i)
 	xData.append(np.array(currX))
 	yData.append(np.array(currY))
 
 xData=np.array(xData)
 yData=np.array(yData)
-yData = normalize(yData)
+#yData = normalize(yData)
 
 t1x=[];t1y=[];t2x=[];t2y=[];t3x=[];t3y=[];
 for i in range(len(yData)):
 	#print(yData[i])
-	if yData[i] > 1:
+	#print(yData[i])
+	if yData[i][0] == 1:
 		t1x.append(xData[i])
 		#t1y.append([1])
-		#t1y.append(yData[i])
-		t1y.append([1,-1])
-	elif yData[i] < -1:
+		t1y.append(yData[i])
+		#t1y.append([1,-1])
+	elif yData[i][2] == 1:
 		t2x.append(xData[i])
 		#t2y.append([-1])
-		#t2y.append(yData[i])
-		t2y.append([-1,1])
+		t2y.append(yData[i])
+		#t2y.append([-1,1])
 	else:
 		t3x.append(xData[i])
 		#t3y.append([0])
-		#t3y.append(yData[i])
-		t3y.append([0,0])
+		t3y.append(yData[i])
+		#t3y.append([0,0])
 		
 		
 t = [len(t1x),len(t2x),len(t3x)]
@@ -303,14 +292,14 @@ testY  = newYData[:testSize]
 #define 
 model = Sequential()
 model.add(Dense(128, input_dim=70, activation='relu'))
-model.add(Dense(64, activation='relu'))
-model.add(Dropout(0.25))
-model.add(Dense(2, activation='tanh'))
+#model.add(Dense(64, activation='relu'))
+#model.add(Dropout(0.25))
+model.add(Dense(3, activation='sigmoid'))
 
 
-sgd = optimizers.sgd(lr=0.00001)
-model.compile(optimizer=sgd,loss='logcosh',metrics=['accuracy'])
-
+sgd = optimizers.sgd(lr=0.01)
+model.compile(optimizer=sgd,loss='categorical_crossentropy',metrics=['accuracy'])
+print(trainX.shape)
 model.fit(trainX,trainY,epochs=100,batch_size=10)
 
 

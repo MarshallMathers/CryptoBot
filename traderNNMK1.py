@@ -72,6 +72,9 @@ def handle_data(context, data):
 		print(context.i/1440)
 	if context.i < startMin:
 		return
+		
+	if context.i % 5 != 0:
+		return
 	# Since we are using limit orders, some orders may not execute immediately
 	# we wait until all orders are executed before considering more trades.
 	orders = context.blotter.open_orders
@@ -136,6 +139,7 @@ def handle_data(context, data):
 #		print(y)
 	t1=0
 	t2=0
+	t3=0
 #	if y[0] > y[1]:
 #		t1=1
 #		t2=0
@@ -160,8 +164,9 @@ def handle_data(context, data):
 #	t1 = 1 if y[0] > 0.5 else 0
 #	t2 = 1 if y[1] > 0.5 else 0
 
-	t2 = 1 if y[0] > 0 else 0
-	t1 = 1 if y[1] > 0 else 0
+	t1 = 1 if y[0] > 0.5 else 0
+	t3 = 1 if y[1] > 0.5 else 0
+	t2 = 1 if y[2] > 0.5 else 0
 	
 #	t1 = 1 if y[1] > 0.5 else 0
 #	t2 = 1 if y[0] > 0.5 else 0
@@ -184,7 +189,7 @@ def handle_data(context, data):
 	record(price=price,
 		   cash=context.portfolio.cash,
 		   price_change=price_change)
-	if t1==t2:
+	if t1==t3:
 		return
 
 
@@ -193,15 +198,33 @@ def handle_data(context, data):
 	tradeTime = 60
 	if context.i < context.lastTrade+tradeTime:
 		return
-	# Trading logic
+	if context.i % 5 != 0:
+		return
+		
 	if t1==1 and pos_amount == 0:
-		context.lastTrade = context.i
-		print('buy : ',price)
-		order_target_percent(context.asset, 1)
-	elif t2==1 and pos_amount > 0:
-		context.lastTrade = context.i
-		order_target_percent(context.asset, 0)
-		print('sell: ',price)
+		log.info('{}: buying - price: {}'.format(data.current_dt, price))
+		
+		# Set a style for limit orders,
+		limit_price = price * 1.005
+		order_target_percent(
+			context.asset, 1, limit_price=limit_price
+		)
+
+	elif t3==1 and pos_amount > 0:
+		log.info('{}: selling - price: {}'.format(data.current_dt, price))
+		limit_price = price * 0.995
+		order_target_percent(
+		    context.asset, 0, limit_price=limit_price
+		)
+	# Trading logic
+#	if t1==1 and pos_amount == 0:
+#		context.lastTrade = context.i
+#		print('buy : ',price)
+#		order_target_percent(context.asset, 1)
+#	elif t2==1 and pos_amount > 0:
+#		context.lastTrade = context.i
+#		order_target_percent(context.asset, 0)
+#		print('sell: ',price)
 		
 	
 	#if short_mavg > long_mavg and pos_amount == 0:
@@ -288,6 +311,6 @@ if __name__ == '__main__':
 			exchange_name='bitfinex',
 			algo_namespace=NAMESPACE,
 			base_currency='usd',
-			start=pd.to_datetime('2018-2-1', utc=True),
+			start=pd.to_datetime('2018-1-1', utc=True),
 			end=pd.to_datetime('2018-2-28', utc=True),
 		)
