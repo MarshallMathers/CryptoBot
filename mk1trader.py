@@ -10,7 +10,7 @@ from catalyst.exchange.utils.stats_utils import extract_transactions
 
 NAMESPACE = 'true_strength'
 log = Logger(NAMESPACE)
-upperPiv = 0
+
 
 
 def initialize(context):
@@ -23,32 +23,36 @@ def initialize(context):
     context.TSI_OverBought = 26.5
     context.TSI_OverSold = -20.2
 
-    context.CandleStick = '1H'
+    context.CandleStick = '1T'
 
 
 def handle_data(context, data):
 
-    long_window = 60
+    time_frame = 720
     # Skip as many bars as long_window to properly compute the average
     context.i += 1
-    if context.i % 5 != 0:
+    #if context.i % 5 != 0:
+    #    return
+
+    if context.i < time_frame:
         return
 
-    if context.i < 24:
-        return
-
+    if context.i % 720 == 0:
+        print((context.i / 1440), "days passed.")
     # Compute moving averages calling data.history() for each
     # moving average with the appropriate parameters. We choose to use
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(long_window), frequency=context.CandleStick)
-    low = data.history(context.asset, 'low', bar_count=int(long_window), frequency=context.CandleStick)
-    high = data.history(context.asset, 'high', bar_count=int(long_window), frequency=context.CandleStick)
+    close = data.history(context.asset, 'close', bar_count=int(time_frame), frequency=context.CandleStick)
+    low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency=context.CandleStick)
+    high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency=context.CandleStick)
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
 
-    tsi = ta.momentum.tsi(pd.Series(close), r=24, s=8)
+    tsi = ta.momentum.tsi(pd.Series(close), r=60, s=30)
+    #tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
+    rsi = ta.momentum.rsi(pd.Series(close), n=30)
 
     # If base_price is not set, we use the current value. This is the
     # price at the first bar which we reference to calculate price_change.
@@ -63,8 +67,11 @@ def handle_data(context, data):
            volume=volume,
            cash=context.portfolio.cash,
            price_change=price_change,
-           tsi=tsi[-1]
+           tsi=tsi[-1],
+           rsi=rsi[-1]
+           #tsiEMA=tsiEMA[-1]
            )
+
 
     # Since we are using limit orders, some orders may not execute immediately
     # we wait until all orders are executed before considering more trades.
@@ -106,7 +113,7 @@ def analyze(context, perf):
     base_currency = exchange.base_currency.upper()
 
     # First chart: Plot portfolio value using base_currency
-    ax1 = plt.subplot(411)
+    ax1 = plt.subplot(511)
     perf.loc[:, ['portfolio_value']].plot(ax=ax1)
     ax1.legend_.remove()
     ax1.set_ylabel('Portfolio Value\n({})'.format(base_currency))
@@ -114,11 +121,11 @@ def analyze(context, perf):
     ax1.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
     # Second chart: Plot asset price, moving averages and buys/sells
-    ax2 = plt.subplot(412, sharex=ax1)
-    perf.loc[:, ['price', 'short_mavg', 'long_mavg']].plot(
+    ax2 = plt.subplot(512, sharex=ax1)
+    perf.loc[:, 'price'].plot(
         ax=ax2,
         label='Price')
-    ax2.legend_.remove()
+    #ax2.legend_.remove()
     ax2.set_ylabel('{asset}\n({base})'.format(
         asset=context.asset.symbol,
         base=base_currency
@@ -149,7 +156,7 @@ def analyze(context, perf):
 
     # Third chart: Compare percentage change between our portfolio
     # and the price of the asset
-    ax3 = plt.subplot(413, sharex=ax1)
+    ax3 = plt.subplot(513, sharex=ax1)
     perf.loc[:, ['algorithm_period_return', 'price_change']].plot(ax=ax3)
     ax3.legend_.remove()
     ax3.set_ylabel('Percent Change')
@@ -157,13 +164,20 @@ def analyze(context, perf):
     ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
     # Fourth chart: Plot our cash
-    ax4 = plt.subplot(414, sharex=ax1)
-    perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
-    ax4.set_ylabel('TSI')
-    ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
-    ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
+    ax4 = plt.subplot(514, sharex=ax1)
+    perf.loc[:, ['rsi']].plot(ax=ax4, label="rsi")
+    ax4.set_ylabel('RSI')
+    #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
+    #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     start, end = ax4.get_ylim()
     ax4.yaxis.set_ticks(np.arange(0, end, end / 5))
+
+    # Fifth Chart
+    ax5 = plt.subplot(515, sharex=ax1)
+    perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
+    ax5.set_ylabel("TSI")
+    start, end = ax5.get_ylim()
+    ax5.yaxis.set_ticks(np.arange(0, end, end / 5))
 
     plt.show()
 
@@ -178,6 +192,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-05-13', utc=True),
-        end=pd.to_datetime('2017-07-25', utc=True),
+        start=pd.to_datetime('2017-07-03', utc=True),
+        end=pd.to_datetime('2017-07-04', utc=True),
     )
