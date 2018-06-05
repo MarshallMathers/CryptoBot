@@ -7,54 +7,54 @@ import matplotlib.pyplot as plt
 
 
 def aggregate(fn,sStep,eStep):
-	nd = re.compile(r'[^\d.]+')
-	f = open(fn)
-	stepSize = eStep*60
-	currData = f.readline().split(',')
-	for i in range(len(currData)):
-		if '.' not in currData[i]:
-			currData[i] = int(nd.sub('',currData[i]))
-		else:
-			currData[i] = float(nd.sub('',currData[i]))
-	
-	tme = int(currData[0])
-	#low = t[1]
-	#high = t[2]
-	#open = t[3]
-	#close = t[4]
-	#vol = t[5]
-	outData = []
-	for line in f:
-		t = line.split(',')
-		for i in range(len(t)):
-			if '.' not in t[i]:
-				t[i] = int(nd.sub('',t[i]))
-			else:
-				t[i] = float(nd.sub('',t[i]))
-		
-		if t[0] > tme + stepSize:
-			outData.append(currData)
-			tme += stepSize
-			currData = [0] * 6
-			currData[0] = tme
-			currData[1] = t[1]
-			currData[2] = t[2]
-			currData[3] = t[3]
-			currData[4] = t[4]
-			currData[5] = t[5]
-		else:
-			if currData[1] >  t[1]:
-				currData[1] = t[1]
-			
-			if currData[2] < t[2]:
-				currData[2] = t[2]
-			
-			currData[4] = t[4]
-			
-			currData[5] += t[5]
-	outData.append(currData)
-	return outData
-			
+    nd = re.compile(r'[^\d.]+')
+    f = open(fn)
+    stepSize = eStep*60
+    currData = f.readline().split(',')
+    for i in range(len(currData)):
+        if '.' not in currData[i]:
+            currData[i] = int(nd.sub('',currData[i]))
+        else:
+            currData[i] = float(nd.sub('',currData[i]))
+
+    tme = int(currData[0])
+    #low = t[1]
+    #high = t[2]
+    #open = t[3]
+    #close = t[4]
+    #vol = t[5]
+    outData = []
+    for line in f:
+        t = line.split(',')
+        for i in range(len(t)):
+            if '.' not in t[i]:
+                t[i] = int(nd.sub('',t[i]))
+            else:
+                t[i] = float(nd.sub('',t[i]))
+
+        if t[0] > tme + stepSize:
+            outData.append(currData)
+            tme += stepSize
+            currData = [0] * 6
+            currData[0] = tme
+            currData[1] = t[1]
+            currData[2] = t[2]
+            currData[3] = t[3]
+            currData[4] = t[4]
+            currData[5] = t[5]
+        else:
+            if currData[1] >  t[1]:
+                currData[1] = t[1]
+
+            if currData[2] < t[2]:
+                currData[2] = t[2]
+
+            currData[4] = t[4]
+
+            currData[5] += t[5]
+    outData.append(currData)
+    return outData
+
 #for filename in os.listdir(os.getcwd() + '/priceData/2017'):
 #	f = open('priceData/2017/' + filename)
 #	start = 0
@@ -69,8 +69,8 @@ tmp = aggregate('priceData/2018/BTC-USD2min.data',1,5)
 tmp2 = [[],[],[],[],[],[]]
 
 for i in range(int(len(tmp)/20)):
-	for j in range(6):
-		tmp2[j].append(tmp[i][j])
+    for j in range(6):
+        tmp2[j].append(tmp[i][j])
 tme = pd.Series(tmp2[0])
 low = pd.Series(tmp2[1])
 high = pd.Series(tmp2[2])
