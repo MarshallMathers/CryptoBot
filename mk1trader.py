@@ -23,7 +23,7 @@ def initialize(context):
     context.TSI_OverBought = 26.5
     context.TSI_OverSold = -20.2
 
-    context.CandleStick = '1T'
+    context.CandleStick = '1H'
 
 
 def handle_data(context, data):
@@ -50,9 +50,12 @@ def handle_data(context, data):
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
 
-    tsi = ta.momentum.tsi(pd.Series(close), r=60, s=30)
-    #tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
-    rsi = ta.momentum.rsi(pd.Series(close), n=30)
+    tsi_long = ta.momentum.tsi(pd.Series(close), r=50, s=28)
+    tsi_short = ta.momentum.tsi(pd.Series(close), r=18, s=12)
+
+
+    # tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
+    # rsi = ta.momentum.rsi(pd.Series(close), n=30)
 
     # If base_price is not set, we use the current value. This is the
     # price at the first bar which we reference to calculate price_change.
@@ -67,9 +70,10 @@ def handle_data(context, data):
            volume=volume,
            cash=context.portfolio.cash,
            price_change=price_change,
-           tsi=tsi[-1],
-           rsi=rsi[-1]
-           #tsiEMA=tsiEMA[-1]
+           tsi_long=tsi_long[-1],
+           tsi_short=tsi_short[-1]
+           # rsi=rsi[-1]
+           # tsiEMA=tsiEMA[-1]
            )
 
 
