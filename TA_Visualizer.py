@@ -90,7 +90,7 @@ base = 'priceData/'
 year = '2017'
 pair = 'LTC-USD'
 month = '7'
-totalMonth = 3
+totalMonth = 1
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -140,6 +140,8 @@ volume = pd.Series(data[5])
 # rsi = ta.momentum.rsi(close, n=14)
 tsi_long = ta.momentum.tsi(close, r=50, s=28)
 tsi_mid = ta.momentum.tsi(close, r=18, s=12)
+
+
 tsi_short = ta.momentum.tsi(close, r=9, s=8)
 
 
