@@ -28,14 +28,17 @@ def initialize(context):
 
 def handle_data(context, data):
 
-    time_frame = 50
+    time_frame = 60
     # Skip as many bars as long_window to properly compute the average
     context.i += 1
-    #if context.i % 5 != 0:
-    #    return
-
-    if context.i < time_frame*5:
+    if context.i % 5 != 0:
         return
+
+    if context.i < time_frame*32:
+        return
+
+    if context.i % 60 == 0:
+        print((context.i / 60), "hours passed.")
 
     if context.i % 720 == 0:
         print((context.i / 1440), "days passed.")
@@ -44,8 +47,8 @@ def handle_data(context, data):
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
-    close2 = data.history(context.asset, 'close', bar_count=int(time_frame), frequency='1T')
+    close = data.history(context.asset, 'close', bar_count=int(time_frame*28), frequency='1T')#context.CandleStick)
+    close2 = data.history(context.asset, 'close', bar_count=int(time_frame*28), frequency='1T')
     low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
     high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
     price = data.current(context.asset, 'price')
@@ -68,8 +71,8 @@ def handle_data(context, data):
     #         if high[i] > currHigh:
     #             currLow = low[i]
 
-    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=18, s=12))
-    tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=10, s=8))
+    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=6*28, s=4*28))
+    tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=10*28, s=8*28))
 
 
     # tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
@@ -242,5 +245,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-07-01', utc=True),
-        end=pd.to_datetime('2017-07-02', utc=True),
+        end=pd.to_datetime('2017-07-12', utc=True),
     )

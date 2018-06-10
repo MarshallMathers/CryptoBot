@@ -28,14 +28,16 @@ def initialize(context):
 
 def handle_data(context, data):
 
-    time_frame = 720
+    time_frame = 60
     # Skip as many bars as long_window to properly compute the average
     context.i += 1
-    #if context.i % 5 != 0:
-    #    return
-
-    if context.i < time_frame:
+    if context.i % 60 != 0:
         return
+
+    if context.i < time_frame*60:
+        return
+
+
 
     if context.i % 720 == 0:
         print((context.i / 1440), "days passed.")
@@ -44,14 +46,31 @@ def handle_data(context, data):
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(time_frame), frequency=context.CandleStick)
-    low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency=context.CandleStick)
-    high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency=context.CandleStick)
+    close = data.history(context.asset, 'close', bar_count=int(time_frame*60), frequency='1T')#context.CandleStick)
+    low = data.history(context.asset, 'low', bar_count=int(time_frame*60), frequency='1T')#context.CandleStick)
+    high = data.history(context.asset, 'high', bar_count=int(time_frame*60), frequency='1T')#context.CandleStick)
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
+    close2 = []
+    low2=[]
+    high2=[]
+    currClose = close[0]
+    currHigh = close[0]
+    currLow = close[0]
+    for i in range(len(close)):
+        if i % 60 == 59:
+            close2.append(currClose)
+            close2.append(currHigh)
+            close2.append(currLow)
+        else:
+            currClose = close[i]
+            if high[i] > currHigh:
+                currHigh = high[i]
+            if high[i] > currHigh:
+                currLow = low[i]
 
-    tsi_long = ta.momentum.tsi(pd.Series(close), r=50, s=28)
-    tsi_short = ta.momentum.tsi(pd.Series(close), r=18, s=12)
+    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=50, s=28))
+    tsi_short = np.array(ta.momentum.tsi(pd.Series(close2), r=18, s=12))
 
 
     # tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
@@ -116,6 +135,7 @@ def analyze(context, perf):
     exchange = list(context.exchanges.values())[0]
     base_currency = exchange.base_currency.upper()
 
+    """
     # First chart: Plot portfolio value using base_currency
     ax1 = plt.subplot(511)
     perf.loc[:, ['portfolio_value']].plot(ax=ax1)
@@ -158,30 +178,56 @@ def analyze(context, perf):
             label=''
         )
 
-    # Third chart: Compare percentage change between our portfolio
-    # and the price of the asset
-    ax3 = plt.subplot(513, sharex=ax1)
-    perf.loc[:, ['algorithm_period_return', 'price_change']].plot(ax=ax3)
-    ax3.legend_.remove()
-    ax3.set_ylabel('Percent Change')
-    start, end = ax3.get_ylim()
-    ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
+    # # Third chart: Compare percentage change between our portfolio
+    # # and the price of the asset
+    # ax3 = plt.subplot(513, sharex=ax1)
+    # perf.loc[:, ['algorithm_period_return', 'price_change']].plot(ax=ax3)
+    # ax3.legend_.remove()
+    # ax3.set_ylabel('Percent Change')
+    # start, end = ax3.get_ylim()
+    # ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
     # Fourth chart: Plot our cash
     ax4 = plt.subplot(514, sharex=ax1)
-    perf.loc[:, ['rsi']].plot(ax=ax4, label="rsi")
-    ax4.set_ylabel('RSI')
+    perf.loc[:, ['tsi_long']].plot(ax=ax4, label="tsi_long")
+    perf.loc[:, ['tsi_short']].plot(ax=ax4, label="tsi_short")
+    ax4.set_ylabel('TSI')
     #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
     #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     start, end = ax4.get_ylim()
     ax4.yaxis.set_ticks(np.arange(0, end, end / 5))
 
     # Fifth Chart
-    ax5 = plt.subplot(515, sharex=ax1)
-    perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
-    ax5.set_ylabel("TSI")
-    start, end = ax5.get_ylim()
-    ax5.yaxis.set_ticks(np.arange(0, end, end / 5))
+    # ax5 = plt.subplot(515, sharex=ax1)
+    # perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
+    # ax5.set_ylabel("TSI")
+    # start, end = ax5.get_ylim()
+    # ax5.yaxis.set_ticks(np.arange(0, end, end / 5))
+    """
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    fig.subplots_adjust(bottom=0.2)
+    start, end = ax1.get_ylim()
+
+    perf.loc[:, 'price'].plot(
+        ax=ax1,
+        label='Price')
+    # ax2.legend_.remove()
+    ax1.set_ylabel('{asset}\n({base})'.format(
+        asset=context.asset.symbol,
+        base=base_currency
+    ))
+
+    perf.loc[:, ['tsi_long']].plot(ax=ax2, label="tsi_long")
+    perf.loc[:, ['tsi_short']].plot(ax=ax2, label="tsi_short")
+
+
+    # ax2.yaxis.set_ticks(np.arange(0, end, end / 5))
+    # ax2 = plt.subplot(512, sharex=ax1)
+
+    # ax2.legend_.remove()
+
+
 
     plt.show()
 
@@ -196,6 +242,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-07-03', utc=True),
-        end=pd.to_datetime('2017-07-04', utc=True),
+        start=pd.to_datetime('2017-07-01', utc=True),
+        end=pd.to_datetime('2017-07-11', utc=True),
     )
