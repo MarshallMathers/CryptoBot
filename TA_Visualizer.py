@@ -89,8 +89,8 @@ def aggregate(fn, sStep, eStep):
 base = 'priceData/'
 year = '2017'
 pair = 'LTC-USD'
-month = '9'
-totalMonth = 8
+month = '4'
+totalMonth = 13
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"

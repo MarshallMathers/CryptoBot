@@ -139,17 +139,17 @@ def handle_data(context, data):
 
         # If the value is over sold then it is a good time to buy
         if tsi_short[-1] <= context.TSI_OverSold and context.stakeInMarket < 1.0:
-            order_target_percent(context.asset, (context.stakeInMarket + 0.25))
-            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of LTC")
             context.stakeInMarket += .25
+            order_target_percent(context.asset, context.stakeInMarket)
+            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of LTC")
             context.canTrade = False
             context.tradeWindow = context.i
 
         # If the market is over bought it is a good time to sell.
-        if tsi_short[-1] >= context.TSI_OverBought and pos_amount > 0.5:
-            order_target_percent(context.asset, (context.stakeInMarket - .25))
-            print("Sold ", pos_amount, "LTC for $", (pos_amount * price))
+        if tsi_short[-1] >= context.TSI_OverBought and pos_amount >= 0.5:
             context.stakeInMarket -= .25
+            order_target_percent(context.asset, context.stakeInMarket)
+            print("Sold ", pos_amount, "LTC for $", (pos_amount * price))
             context.canTrade = False
             context.tradeWindow = context.i
 
@@ -231,7 +231,7 @@ def analyze(context, perf):
     #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
     #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     start, end = ax4.get_ylim()
-    ax4.yaxis.set_ticks(np.arange(-40, end, end / 5))
+    ax4.yaxis.set_ticks(np.arange(-36, end, end / 5))
     ax4.axhline(36, color='darkgoldenrod')
     ax4.axhline(-24, color='darkgoldenrod')
     # Fifth Chart
@@ -281,6 +281,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-09-01', utc=True),
+        start=pd.to_datetime('2017-04-01', utc=True),
         end=pd.to_datetime('2018-04-30', utc=True),
     )
