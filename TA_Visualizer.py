@@ -89,8 +89,8 @@ def aggregate(fn, sStep, eStep):
 base = 'priceData/'
 year = '2017'
 pair = 'LTC-USD'
-month = '6'
-totalMonth = 10
+month = '9'
+totalMonth = 8
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -137,7 +137,8 @@ open = pd.Series(data[3])
 close = pd.Series(data[4])
 volume = pd.Series(data[5])
 
-# rsi = ta.momentum.rsi(close, n=14)
+rsi = ta.momentum.rsi(close, n=42)
+rsi2 = ta.trend.ema_slow(rsi, n_slow=42)
 tsi_long = ta.momentum.tsi(close, r=42, s=30)
 tsi_short = ta.momentum.tsi(close, r=18, s=15)
 
@@ -154,10 +155,11 @@ ax1.plot(close[startTime:], color='tab:green')
 ax2.plot(tsi_long[startTime:], color='tab:red')
 # ax2.plot(tsi_mid[startTime:], color='tab:blue')
 ax2.plot(tsi_short[startTime:], color='tab:green')
-# ax2.plot(tsi_short[startTime:], color='tab:orange')
+ax2.plot(rsi[startTime:], color='tab:orange')
+ax2.plot(rsi2[startTime:], color='tab:orange')
 
-ax2.axhline( 36, color='darkgoldenrod')
-ax2.axhline(-24, color='darkgoldenrod')
+# ax2.axhline( 36, color='darkgoldenrod')
+# ax2.axhline(-24, color='darkgoldenrod')
 
 
 

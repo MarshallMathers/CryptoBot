@@ -120,25 +120,39 @@ def handle_data(context, data):
 
 
 
+
     # We check what's our position on our portfolio and trade accordingly
     pos_amount = context.portfolio.positions[context.asset].amount
 
     # Trading logic
+    # Check to see if outlier event is occuring.
+    # If the long tsi happens to cross the thresh hold during a hold period.
+    if tsi_long[-1] >= context.TSI_OverBought and pos_amount > 0:
+        order_target_percent(context.asset, 0)
+        print("Sold everything for $", (pos_amount * price))
+        context.stakeInMarket = 0
+        context.canTrade = False
+        context.tradeWindow = context.i
+
+
     if context.canTrade:
 
+        # If the value is over sold then it is a good time to buy
         if tsi_short[-1] <= context.TSI_OverSold and context.stakeInMarket < 1.0:
-            order_target_percent(context.asset, (context.stakeInMarket + 0.5))
-            print("Buy", ((cash / 2) / price), "amount of LTC")
-            context.stakeInMarket += .5
+            order_target_percent(context.asset, (context.stakeInMarket + 0.25))
+            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of LTC")
+            context.stakeInMarket += .25
             context.canTrade = False
             context.tradeWindow = context.i
 
-        if tsi_short[-1] >= context.TSI_OverBought and pos_amount > 0:
-            order_target_percent(context.asset, (context.stakeInMarket - .5))
-            print("Sold", (pos_amount * price), "amound of LTC")
-            context.stakeInMarket -= .5
+        # If the market is over bought it is a good time to sell.
+        if tsi_short[-1] >= context.TSI_OverBought and pos_amount > 0.5:
+            order_target_percent(context.asset, (context.stakeInMarket - .25))
+            print("Sold ", pos_amount, "LTC for $", (pos_amount * price))
+            context.stakeInMarket -= .25
             context.canTrade = False
             context.tradeWindow = context.i
+
 
     elif context.i >= context.tradeWindow + 1440:
             context.canTrade = True
@@ -267,6 +281,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-06-01', utc=True),
-        end=pd.to_datetime('2018-01-30', utc=True),
+        start=pd.to_datetime('2017-09-01', utc=True),
+        end=pd.to_datetime('2018-04-30', utc=True),
     )
