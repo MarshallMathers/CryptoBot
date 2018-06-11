@@ -31,28 +31,31 @@ def handle_data(context, data):
     time_frame = 60
     # Skip as many bars as long_window to properly compute the average
     context.i += 1
-    if context.i % 5 != 0:
+    if context.i % 60 != 0:
         return
 
-    if context.i < time_frame*32:
+    if context.i < time_frame*360:
         return
 
-    if context.i % 60 == 0:
-        print((context.i / 60), "hours passed.")
+    # if context.i % 240 == 0:
+    #    print((context.i / 60), "hours passed.")
 
-    if context.i % 720 == 0:
+    if context.i % 360 == 0:
         print((context.i / 1440), "days passed.")
     # Compute moving averages calling data.history() for each
     # moving average with the appropriate parameters. We choose to use
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(time_frame*28), frequency='1T')#context.CandleStick)
-    close2 = data.history(context.asset, 'close', bar_count=int(time_frame*28), frequency='1T')
-    low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
-    high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
+    close = data.history(context.asset, 'close', bar_count=int(146), frequency='60T')
+    close2 = data.history(context.asset, 'close', bar_count=int(360), frequency='1H')
+    # close3 = data.history(context.asset, 'close', bar_count=int(30), frequency='1D')
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
+
+    # low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
+    # high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
+    #
     # close2 = []
     # low2=[]
     # high2=[]
@@ -71,9 +74,11 @@ def handle_data(context, data):
     #         if high[i] > currHigh:
     #             currLow = low[i]
 
-    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=6*28, s=4*28))
-    tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=10*28, s=8*28))
+    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=42, s=30))
+    tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=25, s=22))
 
+    # rsi_long = ta.momentum.rsi(pd.Series(close3), n=14)
+    # rsi_short = ta.momentum.rsi(pd.Series(close3), n=7)
 
     # tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
     # rsi = ta.momentum.rsi(pd.Series(close), n=30)
@@ -92,8 +97,9 @@ def handle_data(context, data):
            cash=context.portfolio.cash,
            price_change=price_change,
            tsi_long=tsi_long[-1],
-           tsi_short=tsi_short[-1]
-           # rsi=rsi[-1]
+           tsi_short=tsi_short[-1],
+           # rsi_long=rsi_long[-1],
+           # rsi_short=rsi_short[-1]
            # tsiEMA=tsiEMA[-1]
            )
 
@@ -223,6 +229,8 @@ def analyze(context, perf):
     perf.loc[:, ['tsi_long']].plot(ax=ax2, label="tsi_long")
     perf.loc[:, ['tsi_short']].plot(ax=ax2, label="tsi_short")
 
+    # perf.loc[:, ['rsi_short']].plot(ax=ax3, label="rsi_short")
+    # perf.loc[:, ['rsi_long']].plot(ax=ax3, label="rsi_long")
 
     # ax2.yaxis.set_ticks(np.arange(0, end, end / 5))
     # ax2 = plt.subplot(512, sharex=ax1)
@@ -244,6 +252,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-07-01', utc=True),
-        end=pd.to_datetime('2017-07-12', utc=True),
+        start=pd.to_datetime('2017-06-01', utc=True),
+        end=pd.to_datetime('2017-07-30', utc=True),
     )
