@@ -90,7 +90,7 @@ base = 'priceData/'
 year = '2017'
 pair = 'LTC-USD'
 month = '6'
-totalMonth = 2
+totalMonth = 10
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -139,8 +139,8 @@ volume = pd.Series(data[5])
 
 # rsi = ta.momentum.rsi(close, n=14)
 tsi_long = ta.momentum.tsi(close, r=42, s=30)
+tsi_short = ta.momentum.tsi(close, r=18, s=15)
 
-tsi_short = ta.momentum.tsi(close, r=25, s=22)
 # tsi_short = ta.momentum.tsi(close, r=15, s=12)
 
 # tsi_mid = ta.trend.ema_slow(tsi_short, n_slow=25)
@@ -156,8 +156,8 @@ ax2.plot(tsi_long[startTime:], color='tab:red')
 ax2.plot(tsi_short[startTime:], color='tab:green')
 # ax2.plot(tsi_short[startTime:], color='tab:orange')
 
-ax2.axhline( 26, color='darkgoldenrod')
-ax2.axhline(-20, color='darkgoldenrod')
+ax2.axhline( 36, color='darkgoldenrod')
+ax2.axhline(-24, color='darkgoldenrod')
 
 
 
