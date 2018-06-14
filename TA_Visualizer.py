@@ -88,9 +88,9 @@ def aggregate(fn, sStep, eStep):
 
 base = 'priceData/'
 year = '2017'
-pair = 'LTC-USD'
-month = '4'
-totalMonth = 13
+pair = 'ETH-USD'
+month = '9'
+totalMonth = 8
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -125,7 +125,7 @@ for i in range(totalMonth):
 cs1_Hour = 1
 cs1_Day = cs1_Hour * 24
 
-startTime = cs1_Day * 3
+startTime = cs1_Day * 30
 startMin = cs1_Hour * startTime
 
 data = tdata
@@ -137,10 +137,13 @@ open = pd.Series(data[3])
 close = pd.Series(data[4])
 volume = pd.Series(data[5])
 
-rsi = ta.momentum.rsi(close, n=42)
-rsi2 = ta.trend.ema_slow(rsi, n_slow=42)
 tsi_long = ta.momentum.tsi(close, r=42, s=30)
 tsi_short = ta.momentum.tsi(close, r=18, s=15)
+
+tsi_EMA = ta.trend.ema_slow(tsi_long, n_slow=125)
+tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=75, ndev=4)
+tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=75, ndev=4)
+
 
 # tsi_short = ta.momentum.tsi(close, r=15, s=12)
 
@@ -154,9 +157,10 @@ ax1.plot(close[startTime:], color='tab:green')
 
 ax2.plot(tsi_long[startTime:], color='tab:red')
 # ax2.plot(tsi_mid[startTime:], color='tab:blue')
-ax2.plot(tsi_short[startTime:], color='tab:green')
-ax2.plot(rsi[startTime:], color='tab:orange')
-ax2.plot(rsi2[startTime:], color='tab:orange')
+#ax2.plot(tsi_short[startTime:], color='tab:green')
+#ax2.plot(tsi_EMA[startTime:], color='tab:orange')
+ax2.plot(tsi_EMA_Bollinger_High[startTime:], color='tab:brown')
+ax2.plot(tsi_EMA_Bollinger_Low[startTime:], color='tab:green')
 
 # ax2.axhline( 36, color='darkgoldenrod')
 # ax2.axhline(-24, color='darkgoldenrod')

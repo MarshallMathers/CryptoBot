@@ -15,7 +15,7 @@ log = Logger(NAMESPACE)
 
 def initialize(context):
     context.i = 0
-    context.asset = symbol('ltc_usd')
+    context.asset = symbol('eth_usd')
     context.base_price = None
     context.signalHigh = 0
     context.signalLow = 0
@@ -50,7 +50,7 @@ def handle_data(context, data):
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(146), frequency='60T')
+    close = data.history(context.asset, 'close', bar_count=int(146), frequency='1H')
     close2 = data.history(context.asset, 'close', bar_count=int(360), frequency='1H')
     # close3 = data.history(context.asset, 'close', bar_count=int(30), frequency='1D')
     price = data.current(context.asset, 'price')
@@ -281,6 +281,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2018-04-30', utc=True),
+        start=pd.to_datetime('2017-01-01', utc=True),
+        end=pd.to_datetime('2018-05-30', utc=True),
     )
