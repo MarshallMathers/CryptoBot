@@ -21,10 +21,11 @@ def initialize(context):
     context.signalLow = 0
     context.stakeInMarket = 0.0
     context.TSI_OverBought = 30
-    context.TSI_OverSold = -22
+    context.TSI_OverSold = -19
 
     context.tradeWindow = 1
-    context.canTrade = True
+    context.downTrend = False
+    context.lastPosition = 0
 
 
 def handle_data(context, data):
@@ -50,8 +51,8 @@ def handle_data(context, data):
     # minute bars for this simulation -> freq="1m"
     # Returns a pandas dataframe.
 
-    close = data.history(context.asset, 'close', bar_count=int(146), frequency='1H')
-    close2 = data.history(context.asset, 'close', bar_count=int(360), frequency='1H')
+    close = data.history(context.asset, 'close', bar_count=int(246), frequency='1H')
+    close2 = data.history(context.asset, 'close', bar_count=int(460), frequency='1H')
     # close3 = data.history(context.asset, 'close', bar_count=int(30), frequency='1D')
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
@@ -77,8 +78,13 @@ def handle_data(context, data):
     #         if high[i] > currHigh:
     #             currLow = low[i]
 
-    tsi_long = np.array(ta.momentum.tsi(pd.Series(close2), r=42, s=30))
-    tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=18, s=15))
+    tsi_long = ta.momentum.tsi(pd.Series(close2), r=40, s=30)
+    # tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=18, s=15))
+
+    tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=75)
+
+    # tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=100, ndev=3)w
+    # tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=100, ndev=3)
 
     # rsi_long = ta.momentum.rsi(pd.Series(close3), n=14)
     # rsi_short = ta.momentum.rsi(pd.Series(close3), n=7)
@@ -101,10 +107,9 @@ def handle_data(context, data):
            cash=cash,
            price_change=price_change,
            tsi_long=tsi_long[-1],
-           tsi_short=tsi_short[-1],
-           # rsi_long=rsi_long[-1],
-           # rsi_short=rsi_short[-1]
-           # tsiEMA=tsiEMA[-1]
+           tsiEMA=tsiEMA[-1],
+           # tsiEMA_HighBol=tsiEMA_HBol[-1],
+           # tsiEMA_LowBol=tsiEMA_LBol[-1]
            )
 
 
@@ -127,6 +132,30 @@ def handle_data(context, data):
     # Trading logic
     # Check to see if outlier event is occuring.
     # If the long tsi happens to cross the thresh hold during a hold period.
+
+    if context.downTrend:
+        if tsi_long[-1] < context.TSI_OverSold and pos_amount < 1.0:
+            order_target_percent(context.asset, 1)
+            context.lastPosition = price
+            context.downTrend = False
+
+    else:
+        if (((context.lastPosition * pos_amount)*.90) > (price * pos_amount) and pos_amount > 0):
+            order_target_percent(context.asset, 0)
+            context.downTrend = True
+
+        if tsi_long[-1] > tsiEMA[-1] and pos_amount < 1.0:
+            order_target_percent(context.asset, 1)
+            context.lastPosition = price
+
+        if tsi_long[-1] < tsiEMA[-1] and pos_amount > 0:
+            order_target_percent(context.asset, 0)
+
+
+
+
+    """
+    
     if tsi_long[-1] >= context.TSI_OverBought and pos_amount > 0:
         order_target_percent(context.asset, 0)
         print("Sold everything for $", (pos_amount * price))
@@ -134,7 +163,7 @@ def handle_data(context, data):
         context.canTrade = False
         context.tradeWindow = context.i
 
-
+    
     if context.canTrade:
 
         # If the value is over sold then it is a good time to buy
@@ -157,6 +186,7 @@ def handle_data(context, data):
     elif context.i >= context.tradeWindow + 1440:
             context.canTrade = True
 
+    """
 
     # if short_mavg > long_mavg and pos_amount == 0:
     # we buy 100% of our portfolio for this asset
@@ -223,17 +253,17 @@ def analyze(context, perf):
     start, end = ax3.get_ylim()
     ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
-    # Fourth chart: Plot our cash
+
+    # Fourth chart: Plot TSI
     ax4 = plt.subplot(514, sharex=ax1)
-    perf.loc[:, ['tsi_long']].plot(ax=ax4, label="tsi_long")
-    perf.loc[:, ['tsi_short']].plot(ax=ax4, label="tsi_short")
+    perf.loc[:, ['tsi_long', 'tsiEMA']].plot(ax=ax4, label="tsi_long")
     ax4.set_ylabel('TSI')
     #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
     #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     start, end = ax4.get_ylim()
     ax4.yaxis.set_ticks(np.arange(-36, end, end / 5))
     ax4.axhline(36, color='darkgoldenrod')
-    ax4.axhline(-24, color='darkgoldenrod')
+    ax4.axhline(-20, color='darkgoldenrod')
     # Fifth Chart
     # ax5 = plt.subplot(515, sharex=ax1)
     # perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
@@ -281,6 +311,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         base_currency='usd',
-        start=pd.to_datetime('2017-01-01', utc=True),
-        end=pd.to_datetime('2018-05-30', utc=True),
+        start=pd.to_datetime('2017-04-01', utc=True),
+        end=pd.to_datetime('2018-04-30', utc=True),
     )
