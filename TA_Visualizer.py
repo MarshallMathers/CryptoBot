@@ -89,8 +89,8 @@ def aggregate(fn, sStep, eStep):
 base = 'priceData/'
 year = '2017'
 pair = 'ETH-USD'
-month = '9'
-totalMonth = 8
+month = '4'
+totalMonth = 5
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -137,7 +137,17 @@ open = pd.Series(data[3])
 close = pd.Series(data[4])
 volume = pd.Series(data[5])
 
+"""
+# mk3trader settings
 tsi_long = ta.momentum.tsi(close, r=42, s=30)
+tsi_short = ta.momentum.tsi(close, r=18, s=15)
+
+tsi_EMA = ta.trend.ema_slow(tsi_long, n_slow=100)
+tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=75, ndev=3)
+tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=75, ndev=3)
+"""
+
+tsi_long = ta.momentum.tsi(close, r=60, s=40)
 tsi_short = ta.momentum.tsi(close, r=18, s=15)
 
 tsi_EMA = ta.trend.ema_slow(tsi_long, n_slow=100)
@@ -162,8 +172,9 @@ ax2.plot(tsi_long[startTime:], color='tab:red')
 ax2.plot(tsi_EMA_Bollinger_High[startTime:], color='tab:brown')
 ax2.plot(tsi_EMA_Bollinger_Low[startTime:], color='tab:green')
 
-# ax2.axhline( 36, color='darkgoldenrod')
-# ax2.axhline(-24, color='darkgoldenrod')
+ax2.axhline(33, color='darkgoldenrod')
+ax2.axhline(0, color='darkgoldenrod')
+ax2.axhline(-24, color='darkgoldenrod')
 
 
 

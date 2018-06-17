@@ -14,18 +14,24 @@ log = Logger(NAMESPACE)
 
 
 def initialize(context):
+
     context.i = 0
     context.asset = symbol('eth_usd')
     context.base_price = None
-    context.signalHigh = 0
-    context.signalLow = 0
     context.stakeInMarket = 0.0
     context.TSI_OverBought = 30
     context.TSI_OverSold = -19
 
     context.tradeWindow = 1
+
     context.downTrend = False
     context.lastPosition = 0
+
+    context.crossLow = False
+    context.crossHigh = False
+    context.neutral = True
+
+
 
 
 def handle_data(context, data):
@@ -38,53 +44,24 @@ def handle_data(context, data):
         return
 
     # Skip as many bars as long_window to properly compute the average
-    if context.i < time_frame*360:
+    if context.i < time_frame*528:
         return
 
-    # if context.i % 240 == 0:
-    #    print((context.i / 60), "hours passed.")
-
     if context.i % 360 == 0:
-        print((context.i / 1440), "days passed.")
-    # Compute moving averages calling data.history() for each
-    # moving average with the appropriate parameters. We choose to use
-    # minute bars for this simulation -> freq="1m"
-    # Returns a pandas dataframe.
+        print((context.i / 1440), "333333 passed.")
 
-    close = data.history(context.asset, 'close', bar_count=int(246), frequency='1H')
-    close2 = data.history(context.asset, 'close', bar_count=int(460), frequency='1H')
-    # close3 = data.history(context.asset, 'close', bar_count=int(30), frequency='1D')
+    close = data.history(context.asset, 'close', bar_count=int(528), frequency='1H')
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
 
-    # low = data.history(context.asset, 'low', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
-    # high = data.history(context.asset, 'high', bar_count=int(time_frame), frequency='1T')#context.CandleStick)
-    #
-    # close2 = []
-    # low2=[]
-    # high2=[]
-    # currClose = close[0]
-    # currHigh = close[0]
-    # currLow = close[0]
-    # for i in range(len(close)):
-    #     if i % 60 == 59:
-    #         close2.append(currClose)
-    #         close2.append(currHigh)
-    #         close2.append(currLow)
-    #     else:
-    #         currClose = close[i]
-    #         if high[i] > currHigh:
-    #             currHigh = high[i]
-    #         if high[i] > currHigh:
-    #             currLow = low[i]
+    tsi_long = ta.momentum.tsi(pd.Series(close), r=55, s=35)
 
-    tsi_long = ta.momentum.tsi(pd.Series(close2), r=40, s=30)
-    # tsi_short = np.array(ta.momentum.tsi(pd.Series(close), r=18, s=15))
+    tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
 
-    tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=75)
+    tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
+    tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
 
-    # tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=100, ndev=3)w
-    # tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=100, ndev=3)
+
 
     # rsi_long = ta.momentum.rsi(pd.Series(close3), n=14)
     # rsi_short = ta.momentum.rsi(pd.Series(close3), n=7)
@@ -98,8 +75,10 @@ def handle_data(context, data):
         context.base_price = price
 
     price_change = (price - context.base_price) / context.base_price
-
     cash = context.portfolio.cash
+
+    if context.i % 360 == 0:
+        print((context.i / 1440), "333333 passed.")
 
     # Save values for later inspection
     record(price=price,
@@ -108,8 +87,8 @@ def handle_data(context, data):
            price_change=price_change,
            tsi_long=tsi_long[-1],
            tsiEMA=tsiEMA[-1],
-           # tsiEMA_HighBol=tsiEMA_HBol[-1],
-           # tsiEMA_LowBol=tsiEMA_LBol[-1]
+           tsiEMA_HighBol=tsiEMA_HBol[-1],
+           tsiEMA_LowBol=tsiEMA_LBol[-1]
            )
 
 
@@ -123,16 +102,51 @@ def handle_data(context, data):
     if not data.can_trade(context.asset):
         return
 
+    pos_amount = context.portfolio.positions[context.asset].amount
+
+
+
+
+    if (tsi_long[-1] > (tsiEMA_HBol[-1])) and (context.crossLow or context.neutral):
+        context.crossHigh = True
+        context.crossLow = False
+        context.neutral = False
+        print("cross high works")
+    if tsi_long[-1] < tsiEMA_LBol[1] and (context.crossHigh or context.neutral):
+        context.crossHigh = False
+        context.crossLow = True
+        context.neutral = False
+        print("cross low works")
+
+    if context.i % 360 == 0:
+        print((context.i / 1440), "2222 passed.")
+
+
+    if not context.neutral:
+
+        if context.crossHigh:
+            if tsi_long[-1] < tsiEMA_HBol[-1] and pos_amount > 0:
+                order_target_percent(context.asset, 0)
+                context.crossHigh = False
+                context.neutral = True
+                print("Selling?")
+        elif context.crossLow:
+            if tsi_long[-1] > tsiEMA_LBol[-1] and pos_amount < 1.0:
+                order_target_percent(context.asset, 1)
+                context.crossLow = False
+                context.neutral = True
+                print("Buying?")
+
+
+
 
 
 
     # We check what's our position on our portfolio and trade accordingly
-    pos_amount = context.portfolio.positions[context.asset].amount
 
     # Trading logic
-    # Check to see if outlier event is occuring.
-    # If the long tsi happens to cross the thresh hold during a hold period.
-
+    """
+    
     if context.downTrend:
         if tsi_long[-1] < context.TSI_OverSold and pos_amount < 1.0:
             order_target_percent(context.asset, 1)
@@ -151,6 +165,7 @@ def handle_data(context, data):
         if tsi_long[-1] < tsiEMA[-1] and pos_amount > 0:
             order_target_percent(context.asset, 0)
 
+    """
 
 
 
@@ -256,7 +271,7 @@ def analyze(context, perf):
 
     # Fourth chart: Plot TSI
     ax4 = plt.subplot(514, sharex=ax1)
-    perf.loc[:, ['tsi_long', 'tsiEMA']].plot(ax=ax4, label="tsi_long")
+    perf.loc[:, ['tsi_long', 'tsiEMA_HighBol', 'tsiEMA_LowBol']].plot(ax=ax4, label="tsi_long")
     ax4.set_ylabel('TSI')
     #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
     #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
@@ -270,32 +285,32 @@ def analyze(context, perf):
     # ax5.set_ylabel("TSI")
     # start, end = ax5.get_ylim()
     # ax5.yaxis.set_ticks(np.arange(0, end, end / 5))
+    """
 
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    fig.subplots_adjust(bottom=0.2)
+    start, end = ax1.get_ylim()
 
-    # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    # fig.subplots_adjust(bottom=0.2)
-    # start, end = ax1.get_ylim()
+    perf.loc[:, 'price'].plot(
+        ax=ax1,
+        label='Price')
+    # ax2.legend_.remove()
+    ax1.set_ylabel('{asset}\n({base})'.format(
+        asset=context.asset.symbol,
+        base=base_currency
+    ))
 
-    # perf.loc[:, 'price'].plot(
-    #     ax=ax1,
-    #     label='Price')
-    # # ax2.legend_.remove()
-    # ax1.set_ylabel('{asset}\n({base})'.format(
-    #     asset=context.asset.symbol,
-    #     base=base_currency
-    # ))
-
-    # perf.loc[:, ['tsi_long']].plot(ax=ax2, label="tsi_long")
-    # perf.loc[:, ['tsi_short']].plot(ax=ax2, label="tsi_short")
+    perf.loc[:, ['tsi_long']].plot(ax=ax2, label="tsi_long")
+    perf.loc[:, ['tsiEMA_LowBol']].plot(ax=ax2, label="tsiEMA_LowBol")
+    perf.loc[:, ['tsiEMA_HighBol']].plot(ax=ax2, label="tsiEMA_HighBol")
 
     # perf.loc[:, ['rsi_short']].plot(ax=ax3, label="rsi_short")
     # perf.loc[:, ['rsi_long']].plot(ax=ax3, label="rsi_long")
+    ax2.axhline(0, color='green')
+    ax2.yaxis.set_ticks(np.arange(-30, 45, 5))
 
-    # ax2.yaxis.set_ticks(np.arange(0, end, end / 5))
-    # ax2 = plt.subplot(512, sharex=ax1)
-
-    # ax2.legend_.remove()
-
+    ax2.legend_.remove()
+    """
 
 
     plt.show()
@@ -312,5 +327,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2018-04-30', utc=True),
+        end=pd.to_datetime('2017-05-30', utc=True),
     )
