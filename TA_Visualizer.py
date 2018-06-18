@@ -147,12 +147,12 @@ tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=75, ndev=3)
 tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=75, ndev=3)
 """
 
-tsi_long = ta.momentum.tsi(close, r=60, s=40)
+tsi_long = ta.momentum.tsi(close, r=30, s=40)
 tsi_short = ta.momentum.tsi(close, r=18, s=15)
 
 tsi_EMA = ta.trend.ema_slow(tsi_long, n_slow=100)
-tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=75, ndev=3)
-tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=75, ndev=3)
+tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=50, ndev=3)
+tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=50, ndev=3)
 
 
 # tsi_short = ta.momentum.tsi(close, r=15, s=12)
