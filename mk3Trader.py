@@ -31,9 +31,6 @@ def initialize(context):
     context.crossHigh = False
     context.neutral = True
 
-
-
-
 def handle_data(context, data):
 
     time_frame = 60
@@ -47,20 +44,21 @@ def handle_data(context, data):
     if context.i < time_frame*528:
         return
 
-    if context.i % 360 == 0:
-        print((context.i / 1440), "333333 passed.")
 
     close = data.history(context.asset, 'close', bar_count=int(528), frequency='1H')
     price = data.current(context.asset, 'price')
     volume = data.current(context.asset, 'volume')
 
+    # tsi_long = ta.momentum.tsi(pd.Series(close), r=55, s=35)
+    # tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
+    # tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
+    # tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
+
+
     tsi_long = ta.momentum.tsi(pd.Series(close), r=55, s=35)
-
     tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
-
     tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
     tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
-
 
 
     # rsi_long = ta.momentum.rsi(pd.Series(close3), n=14)
@@ -78,7 +76,9 @@ def handle_data(context, data):
     cash = context.portfolio.cash
 
     if context.i % 360 == 0:
-        print((context.i / 1440), "333333 passed.")
+        print((context.i / 1440), "Days passed.")
+        print("Tsi value:", tsi_long[-1])
+        print("EMA_Bol value is:", tsiEMA_HBol[-1])
 
     # Save values for later inspection
     record(price=price,
@@ -106,20 +106,19 @@ def handle_data(context, data):
 
 
 
+    # print( tsi_long[-1], "Tsi value")
 
     if (tsi_long[-1] > (tsiEMA_HBol[-1])) and (context.crossLow or context.neutral):
         context.crossHigh = True
         context.crossLow = False
         context.neutral = False
-        print("cross high works")
-    if tsi_long[-1] < tsiEMA_LBol[1] and (context.crossHigh or context.neutral):
+        print("tsi long is crossing the high ")
+    if tsi_long[-1] < tsiEMA_LBol[-1] and (context.crossHigh or context.neutral):
         context.crossHigh = False
         context.crossLow = True
         context.neutral = False
-        print("cross low works")
+        print("tsi long is crossing the low ")
 
-    if context.i % 360 == 0:
-        print((context.i / 1440), "2222 passed.")
 
 
     if not context.neutral:
@@ -327,5 +326,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2017-05-30', utc=True),
+        end=pd.to_datetime('2017-06-30', utc=True),
     )
