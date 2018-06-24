@@ -90,7 +90,7 @@ base = 'priceData/'
 year = '2017'
 pair = 'ETH-USD'
 month = '4'
-totalMonth = 5
+totalMonth = 8
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -147,7 +147,7 @@ tsi_EMA_Bollinger_High = ta.volatility.bollinger_hband(tsi_EMA, n=75, ndev=3)
 tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=75, ndev=3)
 """
 
-tsi_long = ta.momentum.tsi(close, r=30, s=40)
+tsi_long = ta.momentum.tsi(close, r=30, s=20)
 tsi_short = ta.momentum.tsi(close, r=18, s=15)
 
 tsi_EMA = ta.trend.ema_slow(tsi_long, n_slow=100)

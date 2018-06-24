@@ -54,8 +54,7 @@ def handle_data(context, data):
     # tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
     # tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
 
-
-    tsi_long = ta.momentum.tsi(pd.Series(close), r=55, s=35)
+    tsi_long = ta.momentum.tsi(pd.Series(close), r=30, s=35)
     tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
     tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
     tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
@@ -108,16 +107,16 @@ def handle_data(context, data):
 
     # print( tsi_long[-1], "Tsi value")
 
-    if (tsi_long[-1] > (tsiEMA_HBol[-1])) and (context.crossLow or context.neutral):
+    if (tsi_long[-1] > (tsiEMA_HBol[-1])*1.05) and (context.crossLow or context.neutral):
         context.crossHigh = True
         context.crossLow = False
         context.neutral = False
-        print("tsi long is crossing the high ")
-    if tsi_long[-1] < tsiEMA_LBol[-1] and (context.crossHigh or context.neutral):
+        # print("tsi long is crossing the high ")
+    if tsi_long[-1] < (tsiEMA_LBol[-1]*0.95) and (context.crossHigh or context.neutral):
         context.crossHigh = False
         context.crossLow = True
         context.neutral = False
-        print("tsi long is crossing the low ")
+        # print("tsi long is crossing the low ")
 
 
 
@@ -128,13 +127,19 @@ def handle_data(context, data):
                 order_target_percent(context.asset, 0)
                 context.crossHigh = False
                 context.neutral = True
-                print("Selling?")
+                # print("Selling?")
+            if tsi_long[-1] > context.TSI_OverBought and pos_amount > 0\
+                    and tsi_long[-1] < tsi_long[-2]:
+                order_target_percent(context.asset, 0)
+
+
+
         elif context.crossLow:
-            if tsi_long[-1] > tsiEMA_LBol[-1] and pos_amount < 1.0:
+            if tsi_long[-1] > (tsiEMA_LBol[-1]*1.8) and pos_amount < 1.0:
                 order_target_percent(context.asset, 1)
                 context.crossLow = False
                 context.neutral = True
-                print("Buying?")
+                # print("Buying?")
 
 
 
@@ -326,5 +331,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2017-06-30', utc=True),
+        end=pd.to_datetime('2018-05-30', utc=True),
     )
