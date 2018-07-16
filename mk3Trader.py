@@ -331,5 +331,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2018-05-30', utc=True),
+        end=pd.to_datetime('2017-05-30', utc=True),
     )

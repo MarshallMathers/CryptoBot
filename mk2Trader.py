@@ -21,7 +21,7 @@ def initialize(context):
     context.signalLow = 0
     context.stakeInMarket = 0.0
     context.TSI_OverBought = 30
-    context.TSI_OverSold = -22
+    context.TSI_OverSold = -18
 
     context.tradeWindow = 1
     context.canTrade = True
@@ -282,5 +282,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         base_currency='usd',
         start=pd.to_datetime('2017-03-01', utc=True),
-        end=pd.to_datetime('2017-05-30', utc=True),
+        end=pd.to_datetime('2017-06-30', utc=True),
     )
