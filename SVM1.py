@@ -3,7 +3,7 @@ import ta
 import matplotlib.pyplot as plt
 from matplotlib import style
 from sklearn import svm
-import importData
+import functions
 import pandas as pd
 from sklearn import preprocessing
 
@@ -27,7 +27,7 @@ tdata = [[], [], [], [], [], []]
 for i in range(totalMonth):
 
     tmp = base + year + '/' + pair + month + 'min.data'
-    currData = importData.aggregate(tmp, 1, csSize)
+    currData = functions.aggregate(tmp, 1, csSize)
 
     print(tmp)
 
@@ -59,8 +59,17 @@ train_close = pd.Series(train[:, 4])
 train_volume = pd.Series(train[:, 5])
 
 
-tsi = ta.momentum.rsi(train_close, n=28)
-tsi = ta.momentum.tsi(train_close, n=28)
+rsi = ta.momentum.rsi(train_close, n=14)
+tsi = ta.momentum.tsi(train_close, r=25, s=13)
+mfi = ta.momentum.money_flow_index(train_high, train_low, train_close, train_volume, n=14)
+
+easeOf = ta.volume.ease_of_movement(train_high, train_low, train_close, train_volume, n=20)
+
+avgDir = ta.trend.adx(train_high, train_low, train_close, n=14)
+macd = ta.trend.macd_diff(train_close, n_fast=12, n_slow=26, n_sign=9)
+macdSig = ta.trend.macd_signal(train_close, n_fast=12, n_slow=26, n_sign=9)
+
+
 
 
 # vortex_pos = ta.trend.vortex_indicator_pos(train_high, train_low, train_close, n=14)
@@ -72,11 +81,11 @@ print(train_close.shape)
 """
 ##############################################################
 ##                         SVM TIME
-###############################################################
+##############################################################
 
 
 ## Data Handling
-###############################################################
+##############################################################
 """
 
 # Build the data to import to SVM by chunking up the data into sets for classifying the next p amount of time based on
@@ -91,8 +100,8 @@ batch_index = 60
 
 
 size = len(train_close)
-X = np.zeros((num_Batches, batch_Size, 3))
-y = np.zeros((num_Batches, 1, 1))
+X = np.zeros((num_Batches, batch_Size, 9))
+y = np.zeros((num_Batches, 1))
 
 # Reshapes the datasets into 3D matracies for eazy conversion
 train_close_t = train_close.values.reshape([1, size, 1])
@@ -100,21 +109,34 @@ train_open_t = train_open.values.reshape([1, size, 1])
 train_volume_t = train_volume.values.reshape([1, size, 1])
 
 
+rsi_t = rsi.values.reshape([1, size, 1])
+tsi_t = tsi.values.reshape([1, size, 1])
+mfi_t = mfi.values.reshape([1, size, 1])
+easeOf_t = easeOf.values.reshape([1, size, 1])
+avgDir_t = avgDir.values.reshape([1, size, 1])
+macd_t = macd.values.reshape([1, size, 1])
+macdSig_t = macdSig.values.reshape([1, size, 1])
 
 
-
-# TODO: Implement dynamic range for data splitter
-for i in range(1, num_Batches + 1, 1):
+#  Range starts at 2 because the first frame is devoted to starting the calculations for
+#  all of the moving averages
+for i in range(1, num_Batches+1, 1):
 
     # Populates X with with i sets of matrices size 1, ind , 1
     X[i-1:i, ::, :1] = train_open_t[:1, batch_index - batch_Size:batch_index, :1]
     X[i-1:i, ::, 1:2] = train_close_t[:1, batch_index - batch_Size:batch_index, :1]
     X[i-1:i, ::, 2:3] = train_volume_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 3:4] = rsi_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 4:5] = tsi_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 5:6] = easeOf_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 6:7] = avgDir_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 7:8] = macd_t[:1, batch_index - batch_Size:batch_index, :1]
+    X[i-1:i, ::, 8:9] = macdSig_t[:1, batch_index - batch_Size:batch_index, :1]
 
     batch_index += 60
 
 
-print(X[1:2, -5:, :1])
+print(X[:1, -5:, :])
 print((X.shape))
 
 
@@ -129,12 +151,12 @@ for i in range(1, num_Batches + 1):
     diff = (currClose - futureClose) / currClose
     #print(diff)
     if diff > 0.03:
-        y[i-1:i, :, :] = 1
+        y[i-1:i, :] = 1
 
     else:
-        y[i-1:i, :, :] = 0
+        y[i-1:i, :] = 0
 
-print(y[:10,::,::])
+# print(y[:10,::,::])
 # print(X[:5, :10, :3])
 
 
@@ -146,14 +168,10 @@ print(y[:10,::,::])
 # X[:1, 25:50, 1:2] = test2
 # print(X[:1, ::, :3])
 
-print(train_volume_t.shape)
-
-
-
-
+print(y.shape)
 
 clf = svm.SVC(gamma=.0001, C=100)
-# clf.fit()
+clf.fit(X, y)
 
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 fig.subplots_adjust(bottom=0.2)
