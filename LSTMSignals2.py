@@ -57,6 +57,12 @@ for l in f:
 	for i in range(len(t)):
 		data[i].append(float(t[i]))
 data = np.array(data)
+
+
+plt.plot(data[0])
+plt.show()
+plt.plot(data[1])
+plt.show()
 xData = []
 yData = []
 
@@ -156,7 +162,7 @@ model.add(Dropout(0.2))
 model.add(Dense(1, activation='sigmoid'))
 
 
-sgd = optimizers.SGD(lr=0.001)
+sgd = optimizers.SGD(lr=0.1)
 model.compile(optimizer=sgd,loss='binary_crossentropy',metrics=['accuracy'])
 print(trainX.shape)
 model.fit(trainX,trainY,epochs=40,batch_size=50)

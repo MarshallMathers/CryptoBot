@@ -5,6 +5,58 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+def aggregateData(fn, eStep):
+	nd = re.compile(r'[^\d.]+')
+	f = open(fn)
+	stepSize = eStep * 60
+	currData = f.readline().split(',')
+	currData = f.readline().split(',')
+	for i in range(len(currData)):
+		currData[i] = float(nd.sub('', currData[i]))
+	tme = int(currData[0])
+	outData = [[], [], [], [], [], []]
+	for line in f:
+		t = line.split(',')
+		for i in range(len(t)):
+			if '.' not in t[i]:
+				tmp = nd.sub('', t[i])
+				if tmp == '':
+					t[i] = 0
+				else:
+					t[i] = int(tmp)
+			else:
+				tmp = nd.sub('', t[i])
+				if tmp == '':
+					t[i] = 0
+				else:
+					t[i] = float(tmp)
+		if t[0] >= tme + stepSize:
+			for i in range(6):
+				outData[i].append(currData[i])
+			tme += stepSize
+			currData = [0] * 6
+			currData[0] = tme
+			currData[1] = t[1]
+			currData[2] = t[2]
+			currData[3] = t[3]
+			currData[4] = t[4]
+			currData[5] = t[5]
+		else:
+			if t[2] > currData[2]:
+				currData[2] = t[2]
+
+			if t[3] < currData[3] and t[3] != 0:
+				currData[3] = t[3]
+
+			currData[4] = t[4]
+
+			currData[5] += t[5]
+	for i in range(6):
+		outData[i].append(currData[i])
+	return outData
+
+
 def aggregate(fn, eStep):
 	nd = re.compile(r'[^\d.]+')
 	f = open(fn)
@@ -59,32 +111,36 @@ def aggregate(fn, eStep):
 	return outData
 
 outFile = 'trainData/data.data'
-base = 'priceData/'
-year = '2016'
-pair = 'BTC-USD'
-month = '1'
-totalMonth = 24
+#base = 'priceData/'
+#year = '2016'
+#pair = 'BTC-USD'
+#month = '1'
+#totalMonth = 24
 #tm is the output candlestick
-tm = 5
-tdata = [[], [], [], [], [], []]
+#tm = 5
+#tdata = [[], [], [], [], [], []]
 
-for i in range(totalMonth):
+#for i in range(totalMonth):
+#
+#	tmp = base + year + '/' + pair + month + 'min.data'
+#	currData = aggregate(tmp, tm)
+#
+#	print(tmp)
+#
+#	for i in range(int(len(currData))):
+#		for j in range(6):
+#			tdata[j].append(currData[i][j])
+#
+#	month = str(int(month) + 1)
+#	if int(month) > 12:
+#		month = str(int(month) - 12)
+#		year = str(int(year) + 1)
+#
 
-	tmp = base + year + '/' + pair + month + 'min.data'
-	currData = aggregate(tmp, tm)
+#data = tdata
 
-	print(tmp)
+data=np.array(aggregateData('btcData.csv',5))
 
-	for i in range(int(len(currData))):
-		for j in range(6):
-			tdata[j].append(currData[i][j])
-
-	month = str(int(month) + 1)
-	if int(month) > 12:
-		month = str(int(month) - 12)
-		year = str(int(year) + 1)
-
-data = tdata
 #signals to collect for NN
 #keltner uppand and lower
 keltN = 15
@@ -134,9 +190,8 @@ for i in range(len(inData)):
 	inData[i] = inData[i][mN:]
 print(min(close))
 
-for i in inData:
-	plt.plot(i)
-	plt.show()
+#plt.plot(inData[8])
+#plt.show()
 
 
 
@@ -159,7 +214,7 @@ for i in range(len(inData[7])):
 for i in inData:
 	print(min(i), max(i))
 f=open(outFile, 'w')
-for i in range(len(inData[0])):
+for i in range(100000,len(inData[0])):
 
 	curr = ''
 	for j in range(len(inData) - 1):
