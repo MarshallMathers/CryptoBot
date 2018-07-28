@@ -90,7 +90,7 @@ base = 'priceData/'
 year = '2016'
 pair = 'BTC-USD'
 month = '2'
-totalMonth = 2
+totalMonth = 1
 
 # date1 = "2017-1-1"
 # date2 = "2017-9-30"
@@ -163,14 +163,14 @@ tsi_EMA_Bollinger_Low = ta.volatility.bollinger_lband(tsi_EMA, n=50, ndev=3)
 
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 fig.subplots_adjust(bottom=0.2)
-ax1.plot(close[:], color='tab:green')
+ax1.plot(close[:500], color='tab:green')
 
-ax2.plot(tsi_long[30:], color='tab:red')
-ax2.plot(tsi_short[18:], color='tab:green')
+ax2.plot(tsi_long[30:500], color='tab:red')
+ax2.plot(tsi_short[18:500], color='tab:green')
 # ax2.plot(tsi_EMA[startTime:], color='tab:orange')
 # ax2.plot(tsi_EMA_Bollinger_High[startTime:], color='tab:brown')
 # ax2.plot(tsi_EMA_Bollinger_Low[startTime:], color='tab:green')
-
+ax2.xaxis.set_ticks(np.arange(0, 500, 5))
 ax2.axhline(33, color='darkgoldenrod')
 ax2.axhline(0, color='darkgoldenrod')
 ax2.axhline(-24, color='darkgoldenrod')
