@@ -24,8 +24,8 @@ def shuffleLists(l1,l2):
 def getSignal3(data1, tf, st):
 	close = data1[st:st + tf]
 	sp = close[0]
-	tl = sp * 0.97
-	th = sp * 1.03
+	tl = sp * 0.96
+	th = sp * 1.04
 	for i in close:
 		if i > th:
 			return np.array([1, 0, 0])
@@ -59,17 +59,17 @@ for l in f:
 data = np.array(data)
 
 
-plt.plot(data[0])
-plt.show()
-plt.plot(data[1])
-plt.show()
+#plt.plot(data[0])
+#plt.show()
+#plt.plot(data[1])
+#plt.show()
 xData = []
 yData = []
 
 
-lstm1Len = 24
+lstm1Len = 48
 
-for i in range(lstm1Len,len(data[0]),lstm1Len):
+for i in range(lstm1Len,len(data[0]),int(lstm1Len/8)):
 	currX = [];
 	for j in range(i-lstm1Len,i):
 		currInnerX = []
@@ -77,7 +77,7 @@ for i in range(lstm1Len,len(data[0]),lstm1Len):
 			currInnerX.append(data[k][j])
 		currX.append(currInnerX)
 	xData.append(currX)
-	yData.append(getSignal3(data[8],144,i))
+	yData.append(getSignal3(data[8],48,i))
 
 xData=np.array(xData)
 yData=np.array(yData)
@@ -157,15 +157,18 @@ model.add(LSTM(
 		units=200,
 		return_sequences=False))
 model.add(Dropout(0.2))
-#model.add(Dense(64, activation='relu'))
-#model.add(Dropout(0.25))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.25))
 model.add(Dense(1, activation='sigmoid'))
 
 
-sgd = optimizers.SGD(lr=0.1)
+sgd = optimizers.RMSprop(lr=0.0001)
 model.compile(optimizer=sgd,loss='binary_crossentropy',metrics=['accuracy'])
 print(trainX.shape)
-model.fit(trainX,trainY,epochs=40,batch_size=50)
+
+model.summary()
+
+model.fit(trainX,trainY,epochs=20,batch_size=500)
 
 
 scores=model.evaluate(testX,testY)

@@ -85,10 +85,10 @@ def handle_data(context, data):
 	if not data.can_trade(context.asset):
 		return
 	mN = max([keltN,rsiN,emaFN,emaSN,macdFN,macdSN,ichin1,ichin2,ichin3])
-	close = data.history(context.asset,'close',bar_count=startMin,frequency='15T')
-	low = data.history(context.asset,'low',bar_count=startMin,frequency='15T')
-	high = data.history(context.asset,'high',bar_count=startMin,frequency='15T')
-	volume = data.history(context.asset, 'volume', bar_count=startMin, frequency='15T')
+	close = data.history(context.asset,'close',bar_count=startMin,frequency='5T')
+	low = data.history(context.asset,'low',bar_count=startMin,frequency='5T')
+	high = data.history(context.asset,'high',bar_count=startMin,frequency='5T')
+	volume = data.history(context.asset, 'volume', bar_count=startMin, frequency='5T')
 	price = data.current(context.asset, 'price')
 
 
@@ -134,7 +134,7 @@ def handle_data(context, data):
 
 	x = []
 	
-	lstm1Len=24
+	lstm1Len=48
 	for i in range(len(inData[0])-lstm1Len-1,len(inData[0])-1):
 		currX = []
 		for j in range(len(inData)-1):

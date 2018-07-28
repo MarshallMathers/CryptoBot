@@ -214,7 +214,7 @@ for i in range(len(inData[7])):
 for i in inData:
 	print(min(i), max(i))
 f=open(outFile, 'w')
-for i in range(100000,len(inData[0])):
+for i in range(200000,len(inData[0])-60000):
 
 	curr = ''
 	for j in range(len(inData) - 1):
