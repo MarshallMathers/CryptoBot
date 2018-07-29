@@ -116,7 +116,7 @@ for i in range(1, size):
     #print(currClose)
     diff = (currClose - futureClose) / currClose
     if (diff > .02 or diff < -.02):
-        trades.append(diff)
+        trades[i] = diff
     if diff > 0.02:
         y[i-1] = 1
     elif diff < -0.02:
