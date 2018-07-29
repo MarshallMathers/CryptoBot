@@ -5,56 +5,32 @@ from matplotlib import style
 from sklearn import svm
 import functions
 import pandas as pd
+import pickle
 from sklearn import preprocessing
 
 style.use("ggplot")
 
-# def split_data(year, pair, startingMonth, totalMonths):
-
-
-base = 'priceData/'
-year = '2016'
-pair = 'BTC-USD'
-month = '2'
-totalMonth = 2
-
-
-
-csSize = 5
 
 tdata = [[], [], [], [], [], []]
 
-for i in range(totalMonth):
-
-    tmp = base + year + '/' + pair + month + 'min.data'
-    currData = functions.aggregate(tmp, 1, csSize)
-
-    print(tmp)
-
-    for i in range(int(len(currData))):
-        for j in range(6):
-            tdata[j].append(currData[i][j])
-
-    month = str(int(month) + 1)
-    if int(month) > 12:
-        month = str(int(month) - 12)
-        year = str(int(year) + 1)
-
+tdata =np.array(functions.aggregateData('btc_data.csv', 5))
 
 tdata = np.array(tdata).T
 
-train = tdata[:15840]
-test = tdata[15840:]
+train = tdata[200006:-60000]
+test = tdata[-60000:]
 
-print(len(train))
-print(tdata.shape)
+print(train.shape)
+print(test.shape)
 
 train_tme = pd.Series(train[:, 0])
-train_low = pd.Series(train[:, 1])
+train_open = pd.Series(train[:, 1])
 train_high = pd.Series(train[:, 2])
-train_open = pd.Series(train[:, 3])
+train_low = pd.Series(train[:, 3])
 train_close = pd.Series(train[:, 4])
 train_volume = pd.Series(train[:, 5])
+
+print(train_close.shape)
 
 
 # rsi = ta.momentum.rsi(train_close, n=14)
@@ -90,13 +66,10 @@ print(train_close.shape)
 # on the past h
 
 # I want a batch size of a half an hour, which is broken into 6 columns per factor
-batch_Size = 12
-num_Batches = int(len(train)/batch_Size)
-factors = 3
+
 
 
 # This value keeps track of the index of batch so that the data lines up
-batch_index = 6
 
 
 
@@ -130,7 +103,8 @@ size = len(train_close_Total)
 X = train_close_Total
 y = np.zeros((size))
 
-
+trades = []
+trades = np.array(trades)
 
 for i in range(1, size):
 
@@ -141,8 +115,8 @@ for i in range(1, size):
 
     #print(currClose)
     diff = (currClose - futureClose) / currClose
-    # if (diff > .02 or diff < -.02):
-        # print(diff)
+    if (diff > .02 or diff < -.02):
+        trades.append(diff)
     if diff > 0.02:
         y[i-1] = 1
     elif diff < -0.02:
@@ -156,8 +130,9 @@ clf = svm.SVC(gamma=.0001, C=100)
 clf.fit(X, y)
 
 print(test.shape)
-
-print(clf.predict())
+print(max(trades))
+print(min(trades))
+print(len(trades))
 
 
 
