@@ -1,6 +1,58 @@
 import re
 
 
+
+def aggregateData(fn, eStep):
+    nd = re.compile(r'[^\d.]+')
+    f = open(fn)
+    stepSize = eStep * 60
+    currData = f.readline().split(',')
+    currData = f.readline().split(',')
+    for i in range(len(currData)):
+        currData[i] = float(nd.sub('', currData[i]))
+    tme = int(currData[0])
+    outData = [[], [], [], [], [], []]
+    for line in f:
+        t = line.split(',')
+        for i in range(len(t)):
+            if '.' not in t[i]:
+                tmp = nd.sub('', t[i])
+                if tmp == '':
+                    t[i] = 0
+                else:
+                    t[i] = int(tmp)
+            else:
+                tmp = nd.sub('', t[i])
+                if tmp == '':
+                    t[i] = 0
+                else:
+                    t[i] = float(tmp)
+        if t[0] >= tme + stepSize:
+            for i in range(6):
+                outData[i].append(currData[i])
+            tme += stepSize
+            currData = [0] * 6
+            currData[0] = tme
+            currData[1] = t[1]
+            currData[2] = t[2]
+            currData[3] = t[3]
+            currData[4] = t[4]
+            currData[5] = t[5]
+        else:
+            if t[2] > currData[2]:
+                currData[2] = t[2]
+
+            if t[3] < currData[3] and t[3] != 0:
+                currData[3] = t[3]
+
+            currData[4] = t[4]
+
+            currData[5] += t[5]
+    for i in range(6):
+        outData[i].append(currData[i])
+    return outData
+
+
 def aggregate(fn, sStep, eStep):
     nd = re.compile(r'[^\d.]+')
     f = open(fn)
