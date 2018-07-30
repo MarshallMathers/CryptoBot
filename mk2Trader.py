@@ -15,13 +15,13 @@ log = Logger(NAMESPACE)
 
 def initialize(context):
     context.i = 0
-    context.asset = symbol('eth_usd')
+    context.asset = symbol('btc_usd')
     context.base_price = None
     context.signalHigh = 0
     context.signalLow = 0
     context.stakeInMarket = 0.0
-    context.TSI_OverBought = 30
-    context.TSI_OverSold = -18
+    context.TSI_OverBought = 16
+    context.TSI_OverSold = -15
 
     context.tradeWindow = 1
     context.canTrade = True
@@ -139,17 +139,17 @@ def handle_data(context, data):
 
         # If the value is over sold then it is a good time to buy
         if tsi_short[-1] <= context.TSI_OverSold and context.stakeInMarket < 1.0:
-            context.stakeInMarket += .25
+            context.stakeInMarket += .5
             order_target_percent(context.asset, context.stakeInMarket)
-            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of LTC")
+            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of BTC")
             context.canTrade = False
             context.tradeWindow = context.i
 
         # If the market is over bought it is a good time to sell.
         if tsi_short[-1] >= context.TSI_OverBought and pos_amount >= 0.5:
-            context.stakeInMarket -= .25
+            context.stakeInMarket -= .5
             order_target_percent(context.asset, context.stakeInMarket)
-            print("Sold ", pos_amount, "LTC for $", (pos_amount * price))
+            print("Sold ", pos_amount, "BTC for $", (pos_amount * price))
             context.canTrade = False
             context.tradeWindow = context.i
 
@@ -169,14 +169,14 @@ def handle_data(context, data):
 def analyze(context, perf):
     # Get the base_currency that was passed as a parameter to the simulation
     exchange = list(context.exchanges.values())[0]
-    base_currency = exchange.base_currency.upper()
+    quote_currency = exchange.quote_currency.upper()
 
 
     # First chart: Plot portfolio value using base_currency
     ax1 = plt.subplot(511)
     perf.loc[:, ['portfolio_value']].plot(ax=ax1)
     ax1.legend_.remove()
-    ax1.set_ylabel('Portfolio Value\n({})'.format(base_currency))
+    ax1.set_ylabel('Portfolio Value\n({})'.format(quote_currency))
     start, end = ax1.get_ylim()
     ax1.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
@@ -188,7 +188,7 @@ def analyze(context, perf):
     #ax2.legend_.remove()
     ax2.set_ylabel('{asset}\n({base})'.format(
         asset=context.asset.symbol,
-        base=base_currency
+        base=quote_currency
     ))
     start, end = ax2.get_ylim()
     ax2.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
@@ -231,9 +231,9 @@ def analyze(context, perf):
     #ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
     #ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     start, end = ax4.get_ylim()
-    ax4.yaxis.set_ticks(np.arange(-36, end, end / 5))
-    ax4.axhline(36, color='darkgoldenrod')
-    ax4.axhline(-24, color='darkgoldenrod')
+    ax4.yaxis.set_ticks(np.arange(-20, end, end / 5))
+    ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
+    ax4.axhline(context.TSO_OverSold, color='darkgoldenrod')
     # Fifth Chart
     # ax5 = plt.subplot(515, sharex=ax1)
     # perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         analyze=analyze,
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
-        base_currency='usd',
-        start=pd.to_datetime('2017-03-01', utc=True),
-        end=pd.to_datetime('2017-06-30', utc=True),
+        quote_currency='usd',
+        start=pd.to_datetime('2018-02-01', utc=True),
+        end=pd.to_datetime('2018-03-30', utc=True),
     )
