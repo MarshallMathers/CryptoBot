@@ -3,12 +3,13 @@ import numpy as np
 import pandas as pd
 import ta
 from logbook import Logger
-
+from sklearn.externals import joblib
+import functions
 from catalyst import run_algorithm
 from catalyst.api import (record, symbol, order_target_percent, )
 from catalyst.exchange.utils.stats_utils import extract_transactions
 
-NAMESPACE = 'true_strength'
+NAMESPACE = 'SVM_Trader'
 log = Logger(NAMESPACE)
 
 
@@ -17,7 +18,7 @@ def initialize(context):
     context.asset = symbol('btc_usd')
     context.base_price = None
     context.stakeInMarket = 0.0
-
+    context.model = joblib.load('SVM_Model.pkl')
     context.tradeWindow = 1
 
     context.downTrend = False
@@ -33,32 +34,24 @@ def handle_data(context, data):
 
     context.i += 1
 
-    if context.i % 60 != 0:
+    if context.i % 5 != 0:
         return
 
     # Skip as many bars as long_window to properly compute the average
-    if context.i < time_frame * 528:
+    if context.i < time_frame * 4:
         return
 
-    close = data.history(context.asset, 'close', bar_count=int(528), frequency='1H')
     price = data.current(context.asset, 'price')
-    volume = data.current(context.asset, 'volume')
+    close = data.history(context.asset, 'close', bar_count=120, frequency='5T')
+    low = data.history(context.asset, 'low', bar_count=120, frequency='5T')
+    high = data.history(context.asset, 'high', bar_count=120, frequency='5T')
+    volume = data.history(context.asset, 'volume', bar_count=120, frequency='5T')
 
-    # tsi_long = ta.momentum.tsi(pd.Series(close), r=55, s=35)
-    # tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
-    # tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
-    # tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
+    rsi = ta.momentum.rsi(close, n=14)
+    tsi = ta.momentum.tsi(close, r=25, s=13)
+    mfi = ta.momentum.money_flow_index(high, low, close, volume, n=14)
+    macdSig = ta.trend.macd_signal(close, n_fast=12, n_slow=26, n_sign=9)
 
-    tsi_long = ta.momentum.tsi(pd.Series(close), r=30, s=35)
-    tsiEMA = ta.trend.ema_slow(pd.Series(tsi_long), n_slow=100)
-    tsiEMA_HBol = ta.volatility.bollinger_hband(pd.Series(tsiEMA), n=75, ndev=3)
-    tsiEMA_LBol = ta.volatility.bollinger_lband(pd.Series(tsiEMA), n=75, ndev=3)
-
-    # rsi_long = ta.momentum.rsi(pd.Series(close3), n=14)
-    # rsi_short = ta.momentum.rsi(pd.Series(close3), n=7)
-
-    # tsiEMA = ta.trend.ema_slow(tsi, n_slow=720)
-    # rsi = ta.momentum.rsi(pd.Series(close), n=30)
 
     # If base_price is not set, we use the current value. This is the
     # price at the first bar which we reference to calculate price_change.
@@ -70,18 +63,18 @@ def handle_data(context, data):
 
     if context.i % 360 == 0:
         print((context.i / 1440), "Days passed.")
-        print("Tsi value:", tsi_long[-1])
-        print("EMA_Bol value is:", tsiEMA_HBol[-1])
+        #print("Tsi value:", tsi_long[-1])
+        #print("EMA_Bol value is:", tsiEMA_HBol[-1])
 
     # Save values for later inspection
     record(price=price,
            volume=volume,
            cash=cash,
            price_change=price_change,
-           tsi_long=tsi_long[-1],
-           tsiEMA=tsiEMA[-1],
-           tsiEMA_HighBol=tsiEMA_HBol[-1],
-           tsiEMA_LowBol=tsiEMA_LBol[-1]
+           rsi=rsi[-1],
+           tsi=tsi[-1],
+           mfi=mfi[-1],
+           macdSig=macdSig[-1]
            )
 
     # Since we are using limit orders, some orders may not execute immediately
@@ -96,117 +89,30 @@ def handle_data(context, data):
 
     pos_amount = context.portfolio.positions[context.asset].amount
 
-    # print( tsi_long[-1], "Tsi value")
+    totalData = functions.splitAndCompress(close, rsi, tsi, mfi, macdSig)
+    prediction = context.model.predict(totalData[-2:-1])
+    print(prediction)
 
-    if (tsi_long[-1] > (tsiEMA_HBol[-1]) * 1.05) and (context.crossLow or context.neutral):
-        context.crossHigh = True
-        context.crossLow = False
-        context.neutral = False
-        # print("tsi long is crossing the high ")
-    if tsi_long[-1] < (tsiEMA_LBol[-1] * 0.95) and (context.crossHigh or context.neutral):
-        context.crossHigh = False
-        context.crossLow = True
-        context.neutral = False
-        # print("tsi long is crossing the low ")
+    if prediction == 1 and pos_amount < 0:
+        order_target_percent(context.asset, 1)
+        print(pos_amount)
 
-    if not context.neutral:
-
-        if context.crossHigh:
-            if tsi_long[-1] < tsiEMA_HBol[-1] and pos_amount > 0:
-                order_target_percent(context.asset, 0)
-                context.crossHigh = False
-                context.neutral = True
-                # print("Selling?")
-            if tsi_long[-1] > context.TSI_OverBought and pos_amount > 0 \
-                    and tsi_long[-1] < tsi_long[-2]:
-                order_target_percent(context.asset, 0)
-
-
-
-        elif context.crossLow:
-            if tsi_long[-1] > (tsiEMA_LBol[-1] * 1.8) and pos_amount < 1.0:
-                order_target_percent(context.asset, 1)
-                context.crossLow = False
-                context.neutral = True
-                # print("Buying?")
-
-    # We check what's our position on our portfolio and trade accordingly
-
-    # Trading logic
-    """
-
-    if context.downTrend:
-        if tsi_long[-1] < context.TSI_OverSold and pos_amount < 1.0:
-            order_target_percent(context.asset, 1)
-            context.lastPosition = price
-            context.downTrend = False
-
-    else:
-        if (((context.lastPosition * pos_amount)*.90) > (price * pos_amount) and pos_amount > 0):
-            order_target_percent(context.asset, 0)
-            context.downTrend = True
-
-        if tsi_long[-1] > tsiEMA[-1] and pos_amount < 1.0:
-            order_target_percent(context.asset, 1)
-            context.lastPosition = price
-
-        if tsi_long[-1] < tsiEMA[-1] and pos_amount > 0:
-            order_target_percent(context.asset, 0)
-
-    """
-
-    """
-
-    if tsi_long[-1] >= context.TSI_OverBought and pos_amount > 0:
+    if prediction == -1 and pos_amount > 0:
         order_target_percent(context.asset, 0)
-        print("Sold everything for $", (pos_amount * price))
-        context.stakeInMarket = 0
-        context.canTrade = False
-        context.tradeWindow = context.i
+        print(pos_amount)
 
-
-    if context.canTrade:
-
-        # If the value is over sold then it is a good time to buy
-        if tsi_short[-1] <= context.TSI_OverSold and context.stakeInMarket < 1.0:
-            context.stakeInMarket += .25
-            order_target_percent(context.asset, context.stakeInMarket)
-            print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of LTC")
-            context.canTrade = False
-            context.tradeWindow = context.i
-
-        # If the market is over bought it is a good time to sell.
-        if tsi_short[-1] >= context.TSI_OverBought and pos_amount >= 0.5:
-            context.stakeInMarket -= .25
-            order_target_percent(context.asset, context.stakeInMarket)
-            print("Sold ", pos_amount, "LTC for $", (pos_amount * price))
-            context.canTrade = False
-            context.tradeWindow = context.i
-
-
-    elif context.i >= context.tradeWindow + 1440:
-            context.canTrade = True
-
-    """
-
-    # if short_mavg > long_mavg and pos_amount == 0:
-    # we buy 100% of our portfolio for this asset
-    #	order_target_percent(context.asset, 1)
-    # elif short_mavg < long_mavg and pos_amount > 0:
-    # we sell all our positions for this asset
-    #	order_target_percent(context.asset, 0)
 
 
 def analyze(context, perf):
     # Get the base_currency that was passed as a parameter to the simulation
     exchange = list(context.exchanges.values())[0]
-    base_currency = exchange.base_currency.upper()
+    quote_currency = exchange.quote_currency.upper()
 
     # First chart: Plot portfolio value using base_currency
     ax1 = plt.subplot(511)
     perf.loc[:, ['portfolio_value']].plot(ax=ax1)
     ax1.legend_.remove()
-    ax1.set_ylabel('Portfolio Value\n({})'.format(base_currency))
+    ax1.set_ylabel('Portfolio Value\n({})'.format(quote_currency))
     start, end = ax1.get_ylim()
     ax1.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
@@ -218,7 +124,7 @@ def analyze(context, perf):
     # ax2.legend_.remove()
     ax2.set_ylabel('{asset}\n({base})'.format(
         asset=context.asset.symbol,
-        base=base_currency
+        base=quote_currency
     ))
     start, end = ax2.get_ylim()
     ax2.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
@@ -308,7 +214,7 @@ if __name__ == '__main__':
         analyze=analyze,
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
-        base_currency='usd',
-        start=pd.to_datetime('2017-04-01', utc=True),
-        end=pd.to_datetime('2018-05-30', utc=True),
+        quote_currency='usd',
+        start=pd.to_datetime('2018-01-01', utc=True),
+        end=pd.to_datetime('2018-02-28', utc=True),
     )
