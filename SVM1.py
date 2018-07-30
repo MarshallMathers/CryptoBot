@@ -174,8 +174,8 @@ X, y = shuffleLists(X, y)
 train_X = X[:1700]
 train_y = y[:1700]
 
-test_X = X[1700:1701]
-test_y = y[1700:1701]
+test_X = X[1700:]
+test_y = y[1700:]
 
 clf1 = svm.SVC(gamma=.000001, C=10, kernel="rbf", cache_size=1000)
 clf1.fit(train_X, train_y)
@@ -190,11 +190,11 @@ results1_y = clf1.predict(test_X)
 results2_y = clf2.predict(test_X)
 # results3_y = clf3.predict(test_X)
 
-print(results2_y)
-# print(test_y[:50])
+print(results1_y[:50])
+print(test_y[:50])
 
 
-
+joblib.dump(clf1, "SVM_Model.pkl")
 """
 from sklearn.metrics import accuracy_score
 
@@ -207,6 +207,6 @@ print("Accuracy of model 1:", acc1)
 print("Accuracy of model 2:", acc2)
 # print("Accuracy of model 3:", acc3)
 
-joblib.dump(clf2, "SVM_Model.pkl")
+
 
 """
