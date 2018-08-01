@@ -81,6 +81,8 @@ macdSig = macdSig[100:]
 train_Total = functions.splitAndCompress(train_close, rsi, tsi, mfi, macdSig)
 
 
+"""
+
 X = train_Total
 
 size = len(X)
@@ -130,7 +132,7 @@ from sklearn.metrics import accuracy_score
 acc = accuracy_score(test_y, results_y)
 print(acc)
 
-"""
+
 # joblib.dump(clf, "SVM_Model.pkl")
 
 """
