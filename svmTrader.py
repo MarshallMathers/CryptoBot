@@ -9,6 +9,10 @@ from catalyst import run_algorithm
 from catalyst.api import (record, symbol, order_target_percent, )
 from catalyst.exchange.utils.stats_utils import extract_transactions
 
+console_width = 320
+pd.set_option('display.width', console_width)
+np.set_printoptions(linewidth=console_width)
+
 NAMESPACE = 'SVM_Trader'
 log = Logger(NAMESPACE)
 
@@ -47,11 +51,15 @@ def handle_data(context, data):
     high = data.history(context.asset, 'high', bar_count=120, frequency='5T')
     volume = data.history(context.asset, 'volume', bar_count=120, frequency='5T')
 
-    rsi = ta.momentum.rsi(close, n=14)
-    tsi = ta.momentum.tsi(close, r=25, s=13)
-    mfi = ta.momentum.money_flow_index(high, low, close, volume, n=14)
-    macdSig = ta.trend.macd_signal(close, n_fast=12, n_slow=26, n_sign=9)
+    rsi_s = ta.momentum.rsi(close, n=9)
+    tsi_s = ta.momentum.tsi(close, r=14, s=9)
 
+    rsi_l = ta.momentum.rsi(close, n=14)
+    tsi_l = ta.momentum.tsi(close, r=25, s=13)
+
+    mfi = ta.momentum.money_flow_index(high, low, close, volume, n=14)
+
+    stochSig = ta.momentum.stoch_signal(high, low, close, n=14, d_n=3, fillna=False)
 
     # If base_price is not set, we use the current value. This is the
     # price at the first bar which we reference to calculate price_change.
@@ -71,10 +79,12 @@ def handle_data(context, data):
            volume=volume,
            cash=cash,
            price_change=price_change,
-           rsi=rsi[-1],
-           tsi=tsi[-1],
+           rsi_s=rsi_s[-1],
+           rsi_l=rsi_l[-1],
+           tsi_s=tsi_s[-1],
+           tsi_l=tsi_l[-1],
            mfi=mfi[-1],
-           macdSig=macdSig[-1]
+           stochSig=stochSig[-1]
            )
 
     # Since we are using limit orders, some orders may not execute immediately
@@ -89,15 +99,20 @@ def handle_data(context, data):
 
     pos_amount = context.portfolio.positions[context.asset].amount
 
-    totalData = functions.splitAndCompress(close, rsi, tsi, mfi, macdSig)
-    prediction = context.model.predict(totalData[-2:-1])
-    print(prediction)
+    totalData = functions.splitAndCompress_noPrice(rsi_s[60:], tsi_s[60:], rsi_l[60:], tsi_l[60:],
+                                                   mfi[60:], stochSig[60:])
 
-    if prediction == 1 and pos_amount < 0:
+    prediction = context.model.predict(totalData[-1:])
+    if context.i % 360 == 0:
+        print(totalData[-1:])
+        print("Prediction:", prediction[0])
+        print()
+
+    if prediction[0] == 1 and pos_amount < 0:
         order_target_percent(context.asset, 1)
         print(pos_amount)
 
-    if prediction == -1 and pos_amount > 0:
+    if prediction[0] == -1 and pos_amount > 0:
         order_target_percent(context.asset, 0)
         print(pos_amount)
 
@@ -109,7 +124,7 @@ def analyze(context, perf):
     quote_currency = exchange.quote_currency.upper()
 
     # First chart: Plot portfolio value using base_currency
-    ax1 = plt.subplot(511)
+    ax1 = plt.subplot(311)
     perf.loc[:, ['portfolio_value']].plot(ax=ax1)
     ax1.legend_.remove()
     ax1.set_ylabel('Portfolio Value\n({})'.format(quote_currency))
@@ -159,6 +174,7 @@ def analyze(context, perf):
     start, end = ax3.get_ylim()
     ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
 
+    """
     # Fourth chart: Plot TSI
     ax4 = plt.subplot(514, sharex=ax1)
     perf.loc[:, ['tsi_long', 'tsiEMA_HighBol', 'tsiEMA_LowBol']].plot(ax=ax4, label="tsi_long")
@@ -175,7 +191,7 @@ def analyze(context, perf):
     # ax5.set_ylabel("TSI")
     # start, end = ax5.get_ylim()
     # ax5.yaxis.set_ticks(np.arange(0, end, end / 5))
-    """
+  
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     fig.subplots_adjust(bottom=0.2)
@@ -215,6 +231,6 @@ if __name__ == '__main__':
         exchange_name='bitfinex',
         algo_namespace=NAMESPACE,
         quote_currency='usd',
-        start=pd.to_datetime('2018-01-01', utc=True),
+        start=pd.to_datetime('2018-02-01', utc=True),
         end=pd.to_datetime('2018-02-28', utc=True),
     )
