@@ -26,7 +26,7 @@ base = 'priceData/'
 year = '2016'
 pair = 'BTC-USD'
 month = '2'
-totalMonth = 18
+totalMonth = 6
 
 csSize = 5
 
@@ -85,14 +85,20 @@ print(train.shape)
 ## Data Handling
 ##############################################################
 
-train_close = train_close[48:]
-rsi = rsi[48:]
-tsi = tsi[48:]
-mfi = mfi[48:]
-macdSig = macdSig[48:]
+train_close = train_close[48:1248]
+rsi = rsi[48:1248]
+tsi = tsi[48:1248]
+mfi = mfi[48:1248]
+macdSig = macdSig[48:1248]
 
-train_Total = functions.splitAndCompress(train_close, rsi, tsi, mfi, macdSig)
+# train_Total = functions.splitAndCompress(train_close, rsi, tsi, mfi, macdSig)
+train_Total = functions.splitAndCompress_noPrice(train_close, rsi, tsi, mfi, macdSig)
 
+
+
+print(train_Total[:5])
+
+"""
 X = train_Total
 
 size = len(X)
@@ -195,7 +201,7 @@ print(test_y[:50])
 
 
 joblib.dump(clf1, "SVM_Model.pkl")
-"""
+
 from sklearn.metrics import accuracy_score
 
 acc1 = accuracy_score(test_y, results1_y)
