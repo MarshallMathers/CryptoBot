@@ -143,6 +143,8 @@ def splitAndCompress(close, rsi, tsi, mfi, macdSig):
     close_10 = close[10::12]
     close_11 = close[11::12]
 
+    # Set rsi to be between 0 and 1
+    rsi = rsi/100
     rsi_00 = rsi[::12]
     rsi_01 = rsi[1::12]
     rsi_02 = rsi[2::12]
@@ -156,6 +158,8 @@ def splitAndCompress(close, rsi, tsi, mfi, macdSig):
     rsi_10 = rsi[10::12]
     rsi_11 = rsi[11::12]
 
+    # Set tsi to be between 0 and 1
+    tsi = tsi/100
     tsi_00 = tsi[::12]
     tsi_01 = tsi[1::12]
     tsi_02 = tsi[2::12]
@@ -169,6 +173,8 @@ def splitAndCompress(close, rsi, tsi, mfi, macdSig):
     tsi_10 = tsi[10::12]
     tsi_11 = tsi[11::12]
 
+    # Set mfi to be between 0 and 1
+    mfi = mfi / 100
     mfi_00 = mfi[::12]
     mfi_01 = mfi[1::12]
     mfi_02 = mfi[2::12]
@@ -209,89 +215,70 @@ def splitAndCompress(close, rsi, tsi, mfi, macdSig):
                             close_10, rsi_10, tsi_10, mfi_10, macdSig_10,
                             close_11, rsi_11, tsi_11, mfi_11, macdSig_11), axis=-1)
 
-    """
-    train_Total = np.stack((close_00, rsi_00, tsi_00, mfi_00,
-                            close_01, rsi_01, tsi_01, mfi_01,
-                            close_02, rsi_02, tsi_02, mfi_02,
-                            close_03, rsi_03, tsi_03, mfi_03,
-                            close_04, rsi_04, tsi_04, mfi_04,
-                            close_05, rsi_05, tsi_05, mfi_05,
-                            close_06, rsi_06, tsi_06, mfi_06,
-                            close_07, rsi_07, tsi_07, mfi_07,
-                            close_08, rsi_08, tsi_08, mfi_08,
-                            close_09, rsi_09, tsi_09, mfi_09,
-                            close_10, rsi_10, tsi_10, mfi_10,
-                            close_11, rsi_11, tsi_11, mfi_11), axis=-1)
-    """
     return train_Total
 
 
-def splitAndCompress_noPrice(rsi, tsi, mfi, macdSig):
-
-    rsi_00 = rsi[::12]
-    rsi_01 = rsi[1::12]
-    rsi_02 = rsi[2::12]
-    rsi_03 = rsi[3::12]
-    rsi_04 = rsi[4::12]
-    rsi_05 = rsi[5::12]
-    rsi_06 = rsi[6::12]
-    rsi_07 = rsi[7::12]
-    rsi_08 = rsi[8::12]
-    rsi_09 = rsi[9::12]
-    rsi_10 = rsi[10::12]
-    rsi_11 = rsi[11::12]
-
-    tsi_00 = tsi[::12]
-    tsi_01 = tsi[1::12]
-    tsi_02 = tsi[2::12]
-    tsi_03 = tsi[3::12]
-    tsi_04 = tsi[4::12]
-    tsi_05 = tsi[5::12]
-    tsi_06 = tsi[6::12]
-    tsi_07 = tsi[7::12]
-    tsi_08 = tsi[8::12]
-    tsi_09 = tsi[9::12]
-    tsi_10 = tsi[10::12]
-    tsi_11 = tsi[11::12]
-
-    mfi_00 = mfi[::12]
-    mfi_01 = mfi[1::12]
-    mfi_02 = mfi[2::12]
-    mfi_03 = mfi[3::12]
-    mfi_04 = mfi[4::12]
-    mfi_05 = mfi[5::12]
-    mfi_06 = mfi[6::12]
-    mfi_07 = mfi[7::12]
-    mfi_08 = mfi[8::12]
-    mfi_09 = mfi[9::12]
-    mfi_10 = mfi[10::12]
-    mfi_11 = mfi[11::12]
+def split(ta_signal):
+    out = []
+    for i in range(12):
+        out.append(ta_signal[i::12])
+    return out
 
 
-    macdSig_00 = macdSig[::12]
-    macdSig_01 = macdSig[1::12]
-    macdSig_02 = macdSig[2::12]
-    macdSig_03 = macdSig[3::12]
-    macdSig_04 = macdSig[4::12]
-    macdSig_05 = macdSig[5::12]
-    macdSig_06 = macdSig[6::12]
-    macdSig_07 = macdSig[7::12]
-    macdSig_08 = macdSig[8::12]
-    macdSig_09 = macdSig[9::12]
-    macdSig_10 = macdSig[10::12]
-    macdSig_11 = macdSig[11::12]
+def splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, stochSig):
 
-    train_Total = np.stack((rsi_00, tsi_00, mfi_00, macdSig_00,
-                            rsi_01, tsi_01, mfi_01, macdSig_01,
-                            rsi_02, tsi_02, mfi_02, macdSig_02,
-                            rsi_03, tsi_03, mfi_03, macdSig_03,
-                            rsi_04, tsi_04, mfi_04, macdSig_04,
-                            rsi_05, tsi_05, mfi_05, macdSig_05,
-                            rsi_06, tsi_06, mfi_06, macdSig_06,
-                            rsi_07, tsi_07, mfi_07, macdSig_07,
-                            rsi_08, tsi_08, mfi_08, macdSig_08,
-                            rsi_09, tsi_09, mfi_09, macdSig_09,
-                            rsi_10, tsi_10, mfi_10, macdSig_10,
-                            rsi_11, tsi_11, mfi_11, macdSig_11), axis=-1)
+    # Set rsi short to be between 0 and 1
+    rsi_s = rsi_s/100
+    rsi_list_s = split(rsi_s)
 
-    return train_Total
+    # Set tsi short to be between 0 and 1
+    tsi_s = tsi_s/100
+    tsi_list_s = split(tsi_s)
+
+    # Set rsi long to be between 0 and 1
+    rsi_l = rsi_l / 100
+    rsi_list_l = split(rsi_l)
+
+    # Set tsi long to be between 0 and 1
+    tsi_l = tsi_l / 100
+    tsi_list_l = split(tsi_l)
+
+    # Set mfi to be between 0 and 1
+    mfi = mfi / 100
+    mfi_list = split(mfi)
+
+    # Set stoch to be between 0 and 1
+    stochSig = stochSig / 100
+    stochSig_list = split(stochSig)
+
+    rsi_tsi_s_l = np.stack((rsi_list_s[0],  tsi_list_s[0],  rsi_list_l[0],  tsi_list_l[0],
+                            rsi_list_s[1],  tsi_list_s[1],  rsi_list_l[1],  tsi_list_l[1],
+                            rsi_list_s[2],  tsi_list_s[2],  rsi_list_l[2],  tsi_list_l[2],
+                            rsi_list_s[3],  tsi_list_s[3],  rsi_list_l[3],  tsi_list_l[3],
+                            rsi_list_s[4],  tsi_list_s[4],  rsi_list_l[4],  tsi_list_l[4],
+                            rsi_list_s[5],  tsi_list_s[5],  rsi_list_l[5],  tsi_list_l[5],
+                            rsi_list_s[6],  tsi_list_s[6],  rsi_list_l[6],  tsi_list_l[6],
+                            rsi_list_s[7],  tsi_list_s[7],  rsi_list_l[7],  tsi_list_l[7],
+                            rsi_list_s[8],  tsi_list_s[8],  rsi_list_l[8],  tsi_list_l[8],
+                            rsi_list_s[9],  tsi_list_s[9],  rsi_list_l[9],  tsi_list_l[9],
+                            rsi_list_s[10], tsi_list_s[10], rsi_list_l[10], tsi_list_l[10],
+                            rsi_list_s[11], tsi_list_s[11], rsi_list_l[11], tsi_list_l[11]), axis=-1)
+
+    mfi_stoch_stochSig = np.stack((mfi_list[0],  stochSig_list[0],
+                                   mfi_list[1],  stochSig_list[1],
+                                   mfi_list[2],  stochSig_list[2],
+                                   mfi_list[3],  stochSig_list[3],
+                                   mfi_list[4],  stochSig_list[4],
+                                   mfi_list[5],  stochSig_list[5],
+                                   mfi_list[6],  stochSig_list[6],
+                                   mfi_list[7],  stochSig_list[7],
+                                   mfi_list[8],  stochSig_list[8],
+                                   mfi_list[9],  stochSig_list[9],
+                                   mfi_list[10], stochSig_list[10],
+                                   mfi_list[11], stochSig_list[11]), axis=-1)
+
+    sweetJeebus = np.concatenate((rsi_tsi_s_l, mfi_stoch_stochSig), axis=1)
+
+    return sweetJeebus
+
+
