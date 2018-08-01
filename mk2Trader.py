@@ -233,7 +233,7 @@ def analyze(context, perf):
     start, end = ax4.get_ylim()
     ax4.yaxis.set_ticks(np.arange(-20, end, end / 5))
     ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
-    ax4.axhline(context.TSO_OverSold, color='darkgoldenrod')
+    ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     # Fifth Chart
     # ax5 = plt.subplot(515, sharex=ax1)
     # perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
@@ -282,5 +282,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         quote_currency='usd',
         start=pd.to_datetime('2018-02-01', utc=True),
-        end=pd.to_datetime('2018-03-30', utc=True),
+        end=pd.to_datetime('2018-04-30', utc=True),
     )
