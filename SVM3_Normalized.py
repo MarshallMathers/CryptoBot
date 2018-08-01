@@ -154,12 +154,12 @@ for i in range(1, size):
 
 
 
-t_side_x = [];
-t_side_y = [];
-t_buy_x = [];
-t_buy_y = [];
-t_sell_x = [];
-t_sell_y = [];
+t_side_x = []
+t_side_y = []
+t_buy_x = []
+t_buy_y = []
+t_sell_x = []
+t_sell_y = []
 
 for i in range(len(X)):
     if y[i] == 0:
