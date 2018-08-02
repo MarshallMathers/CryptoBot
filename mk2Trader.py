@@ -139,7 +139,7 @@ def handle_data(context, data):
 
         # If the value is over sold then it is a good time to buy
         if tsi_short[-1] <= context.TSI_OverSold and context.stakeInMarket < 1.0:
-            context.stakeInMarket += .5
+            context.stakeInMarket += 1
             order_target_percent(context.asset, context.stakeInMarket)
             print("Bought", (pos_amount*price + ((cash / 2) / price)), "amount of BTC")
             context.canTrade = False
@@ -147,7 +147,7 @@ def handle_data(context, data):
 
         # If the market is over bought it is a good time to sell.
         if tsi_short[-1] >= context.TSI_OverBought and pos_amount >= 0.5:
-            context.stakeInMarket -= .5
+            context.stakeInMarket -= 1
             order_target_percent(context.asset, context.stakeInMarket)
             print("Sold ", pos_amount, "BTC for $", (pos_amount * price))
             context.canTrade = False
@@ -282,5 +282,5 @@ if __name__ == '__main__':
         algo_namespace=NAMESPACE,
         quote_currency='usd',
         start=pd.to_datetime('2018-02-01', utc=True),
-        end=pd.to_datetime('2018-04-30', utc=True),
+        end=pd.to_datetime('2018-04-28', utc=True),
     )
