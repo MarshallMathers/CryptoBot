@@ -20,8 +20,8 @@ def initialize(context):
     context.signalHigh = 0
     context.signalLow = 0
     context.stakeInMarket = 0.0
-    context.TSI_OverBought = 16
-    context.TSI_OverSold = -15
+    context.TSI_OverBought = 13
+    context.TSI_OverSold = -13
 
     context.tradeWindow = 1
     context.canTrade = True
@@ -233,7 +233,7 @@ def analyze(context, perf):
     start, end = ax4.get_ylim()
     ax4.yaxis.set_ticks(np.arange(-20, end, end / 5))
     ax4.axhline(context.TSI_OverBought, color='darkgoldenrod')
-    ax4.axhline(context.TSO_OverSold, color='darkgoldenrod')
+    ax4.axhline(context.TSI_OverSold, color='darkgoldenrod')
     # Fifth Chart
     # ax5 = plt.subplot(515, sharex=ax1)
     # perf.loc[:, 'tsi'].plot(ax=ax4, label="tsi")
