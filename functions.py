@@ -225,7 +225,7 @@ def split(ta_signal):
     return out
 
 
-def splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, stochSig):
+def splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, bband_l, bband_h):
 
     # Set rsi short to be between 0 and 1
     rsi_s = rsi_s/100
@@ -248,8 +248,8 @@ def splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, stochSig):
     mfi_list = split(mfi)
 
     # Set stoch to be between 0 and 1
-    stochSig = stochSig / 100
-    stochSig_list = split(stochSig)
+    bband_h_list = split(bband_h)
+    bband_l_list = split(bband_l)
 
     rsi_tsi_s_l = np.stack((rsi_list_s[0],  tsi_list_s[0],  rsi_list_l[0],  tsi_list_l[0],
                             rsi_list_s[1],  tsi_list_s[1],  rsi_list_l[1],  tsi_list_l[1],
@@ -264,20 +264,20 @@ def splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, stochSig):
                             rsi_list_s[10], tsi_list_s[10], rsi_list_l[10], tsi_list_l[10],
                             rsi_list_s[11], tsi_list_s[11], rsi_list_l[11], tsi_list_l[11]), axis=-1)
 
-    mfi_stoch_stochSig = np.stack((mfi_list[0],  stochSig_list[0],
-                                   mfi_list[1],  stochSig_list[1],
-                                   mfi_list[2],  stochSig_list[2],
-                                   mfi_list[3],  stochSig_list[3],
-                                   mfi_list[4],  stochSig_list[4],
-                                   mfi_list[5],  stochSig_list[5],
-                                   mfi_list[6],  stochSig_list[6],
-                                   mfi_list[7],  stochSig_list[7],
-                                   mfi_list[8],  stochSig_list[8],
-                                   mfi_list[9],  stochSig_list[9],
-                                   mfi_list[10], stochSig_list[10],
-                                   mfi_list[11], stochSig_list[11]), axis=-1)
+    mfi_bband_high_low = np.stack((mfi_list[0],  bband_l_list[0],  bband_h_list[0],
+                                   mfi_list[1],  bband_l_list[1],  bband_h_list[1],
+                                   mfi_list[2],  bband_l_list[2],  bband_h_list[2],
+                                   mfi_list[3],  bband_l_list[3],  bband_h_list[3],
+                                   mfi_list[4],  bband_l_list[4],  bband_h_list[4],
+                                   mfi_list[5],  bband_l_list[5],  bband_h_list[5],
+                                   mfi_list[6],  bband_l_list[6],  bband_h_list[6],
+                                   mfi_list[7],  bband_l_list[7],  bband_h_list[7],
+                                   mfi_list[8],  bband_l_list[8],  bband_h_list[8],
+                                   mfi_list[9],  bband_l_list[9],  bband_h_list[9],
+                                   mfi_list[10], bband_l_list[10], bband_h_list[10],
+                                   mfi_list[11], bband_l_list[11], bband_h_list[11]), axis=-1)
 
-    sweetJeebus = np.concatenate((rsi_tsi_s_l, mfi_stoch_stochSig), axis=1)
+    sweetJeebus = np.concatenate((rsi_tsi_s_l, mfi_bband_high_low), axis=1)
 
     return sweetJeebus
 
