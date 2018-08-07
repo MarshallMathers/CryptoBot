@@ -9,64 +9,43 @@ from sklearn.externals import joblib
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
 import functions
-style.use("ggplot")
 
 # This is so that when I print things to the console they display at the width of my monitor
+style.use("ggplot")
 console_width = 320
 pd.set_option('display.width', console_width)
 np.set_printoptions(linewidth=console_width)
 
 """
-This makes use of the old data that we scrapped from exchanges, this file helped me build
-    out the foundation for my SVM because it allowed me to play with smaller amounts of data
-    cutting down on testing time.
+This makes use of the new data that we pulled from Kaggle, this data set is much more expansive though
+    part of it is unusable, as the data set begins in 2012 where the maximum price fluctuation is less
+    than $1,000. Even still it produces much more usable data than our previour data set that we scrapped
+    from exchanges     
 """
-
-# Declares the file path
-base = 'priceData/'
-# What year does the function start to pull form
-year = '2016'
-# What is the pair the is being pulled
-pair = 'BTC-USD'
-# What is the starting month in the specified year
-month = '2'
-# How many months of data are being pulled in, in total
-totalMonth = 26
-# Stands for candle stick size, in this case I am pulling data in 5 minute intervals
-csSize = 5
 
 # Declares empty list to load all of the data into
 tdata = [[], [], [], [], [], []]
 
-# This is a for loop that loads in all of the data in the range and size specified above
-for i in range(totalMonth):
+# Stands for candle stick size, in this case I am pulling data in 5 minute intervals
+csSize = 5
 
-    # Combines the variables stated above to make the path of the first file being read
-    tmp = base + year + '/' + pair + month + 'min.data'
-    currData = functions.aggregate(tmp, 1, csSize)
-
-    print(tmp)
-
-    for i in range(int(len(currData))):
-        for j in range(6):
-            tdata[j].append(currData[i][j])
-
-    month = str(int(month) + 1)
-    if int(month) > 12:
-        month = str(int(month) - 12)
-        year = str(int(year) + 1)
+# This is the file that contains all of the data we need
+tdata =np.array(functions.aggregateData('btc_data.csv', csSize))
 
 # Transposes the whole data set so that it's columns represent open, close, etc
 train = np.array(tdata).T
+# Seperates the initial part of the data that we don't want as mentioned above
+train = train[200000:]
 
 # Because I am training my SVM to predict over an hour or so I make sure the whole data set
 # is divisible by 12 so that all of my arrays are the same size when I got to split them up.
-# Note: Pulling data in 5 minute chunks, so 5 * 12 = 1 Hour.
+# Note: Pulling data in 5 minute chunks, so 5 * 12 = 1 Hou
 if len(train) % 12 != 0:
     chop = len(train) % 12
     train = train[:-chop]
 
 # Split up the whole data set into the values we want to feed into our TA signals
+train_tme = pd.Series(train[:, 0])
 train_open = pd.Series(train[:, 1])
 train_high = pd.Series(train[:, 2])
 train_low = pd.Series(train[:, 3])
@@ -77,19 +56,24 @@ train_volume = pd.Series(train[:, 5])
 #########################################################
 ####               TA Signals                        ####
 #########################################################
-
-# Calculates a short and long Relative Strength Index
 rsi_short = ta.momentum.rsi(train_close, n=9)
-rsi_long = ta.momentum.rsi(train_close, n=14)
+tsi_short = ta.momentum.tsi(train_close, r=12, s=9)
 
-# Calculates a short and long True Strength Index
-tsi_short = ta.momentum.tsi(train_close, r=14, s=9)
-tsi_long = ta.momentum.tsi(train_close, r=25, s=13)
+rsi_medium = ta.momentum.rsi(train_close, n=12)
+tsi_medium = ta.momentum.tsi(train_close, r=15, s=9)
 
-# Calculates a Money Flow index
+rsi_medium2 = ta.momentum.rsi(train_close, n=15)
+tsi_medium2 = ta.momentum.tsi(train_close, r=18, s=12)
+
+rsi_long = ta.momentum.rsi(train_close, n=24)
+tsi_long = ta.momentum.tsi(train_close, r=27, s=18)
+
+rsi_exlong = ta.momentum.rsi(train_close, n=30)
+tsi_exlong = ta.momentum.tsi(train_close, r=35, s=25)
+
 mfi = ta.momentum.money_flow_index(train_high, train_low, train_close, train_volume, n=14)
+macdSig = ta.trend.macd_signal(train_close, n_fast=12, n_slow=26, n_sign=9)
 
-# Calculates two Bollinger band indicators that return a 1 when crossed, otherwise return a 0
 bband_high = ta.volatility.bollinger_hband_indicator(train_close, n=20)
 bband_low = ta.volatility.bollinger_lband_indicator(train_close, n=20)
 
@@ -98,26 +82,68 @@ bband_low = ta.volatility.bollinger_lband_indicator(train_close, n=20)
 ####                Data Handling                    ####
 #########################################################
 
+
 # Ensure all input array's are the same size
 # The reason all arrays start from 48 is to ensure all TA signals have
 # been calculated to avoid NAN or missing values
+
 train_close = train_close[48:]
 rsi_s = rsi_short[48:]
-rsi_l = rsi_long[48:]
 tsi_s = tsi_short[48:]
+
+rsi_m = rsi_medium[48:]
+tsi_m = tsi_medium[48:]
+
+rsi_m2 = rsi_medium2[48:]
+tsi_m2 = tsi_medium2[48:]
+
+rsi_l = rsi_long[48:]
 tsi_l = tsi_long[48:]
+
+rsi_el = rsi_exlong[48:]
+tsi_el = tsi_exlong[48:]
+
 mfi = mfi[48:]
-bband_high = bband_high[48:]
-bband_low = bband_low[48:]
+macdSig = macdSig[48:]
+bband_h = bband_high[48:]
+bband_l = bband_low[48:]
+
+
+# Double check data for Nan values
+"""
+print(np.argwhere(np.isnan(train_close)))
+
+print(np.argwhere(np.isnan(rsi_s)))
+print(np.argwhere(np.isnan(rsi_m)))
+print(np.argwhere(np.isnan(rsi_m2)))
+print(np.argwhere(np.isnan(rsi_l)))
+print(np.argwhere(np.isnan(rsi_el)))
+
+print(np.argwhere(np.isnan(tsi_s)))
+print(np.argwhere(np.isnan(tsi_m)))
+print(np.argwhere(np.isnan(tsi_m2)))
+print(np.argwhere(np.isnan(tsi_l)))
+print(np.argwhere(np.isnan(tsi_el)))
+
+
+print(np.argwhere(np.isnan(mfi)))
+print(np.argwhere(np.isnan(macdSig)))
+print(np.argwhere(np.isnan(bband_high)))
+print(np.argwhere(np.isnan(bband_low)))
+"""
+
 
 # Separate price to calculate the expected y values for training
 price = functions.split(train_close)
 price = np.stack((price[0], price[1], price[2], price[3], price[4], price[5],
                   price[6], price[7], price[8], price[9], price[10], price[11]), axis=-1)
 
+
 # Generate the X data set for training the SVM, this data set splits the list of TA values into rows
 # representing an hour to fit with the rest of the model, ensuring that values are accounted for.
-X = functions.splitAndCompress_noPrice(rsi_s, tsi_s, rsi_l, tsi_l, mfi, bband_low, bband_high)
+X = functions.splitAndCompress_Big(rsi_s, rsi_m, rsi_m2, rsi_l, rsi_el,
+                                             tsi_s, tsi_m, tsi_m2, tsi_l, tsi_el,
+                                             mfi, bband_l, bband_h)
 
 # Get the length of X to make y the same length
 size = len(X)
@@ -127,7 +153,6 @@ y = np.zeros(size)
 # Double check that both array's are the same size.
 print("The shape of X:", X.shape)
 print("The shape of y:", y.shape)
-
 
 # Generate y data for training and testing
 for i in range(1, size):
@@ -161,12 +186,7 @@ for i in range(1, size):
 
 # generate empty lists to tally up how many of what kind of signals are generated
 # each list is paired so that the values of X are stored with their corresponding y values
-t_side_x = []
-t_side_y = []
-t_buy_x = []
-t_buy_y = []
-t_sell_x = []
-t_sell_y = []
+t_side_x = []; t_side_y = []; t_buy_x = []; t_buy_y = []; t_sell_x = []; t_sell_y = []
 
 # Tallies up each signal
 for i in range(len(X)):
@@ -197,11 +217,13 @@ sideways = len(t_side_y)
 X = np.concatenate((t_side_x, t_buy_x, t_sell_x), axis=0)
 y = np.concatenate((t_side_y, t_buy_y, t_sell_y), axis=0)
 
+print(t_sell_x.shape)
+print(t_sell_y.shape)
+
 # Double check everything made it back into the arrays
 print(X.shape)
 print(y.shape)
 
-# Print out how many of each signal was generated
 print("Buys:", buys, "Sells:", sells, "Sideways:", sideways)
 
 # Double check that no NAN values appeared or missing values
@@ -210,48 +232,54 @@ print(np.argwhere(np.isnan(X)))
 # Shuffle everything so that we are ready to train!
 X, y = functions.shuffleLists(X, y)
 
+# One last check that no NAN values appeared from the shuffle
 print(np.argwhere(np.isnan(X)))
-
 
 #########################################################
 ####                 SVM Time                        ####
 #########################################################
 
-# Very basic way of splitting up the data into testing and training
-train_X = X[:14000]
-train_y = y[:14000]
+# Split the data up into test and train
+setSize = len(X)
+trainSize = .85 * setSize
 
-test_X = X[14000:]
-test_y = y[14000:]
+print(trainSize)
 
-# After a lot of messing around I settled on SGDClassifier
+train_X = X[:34171]
+train_y = y[:34171]
+
+test_X = X[34171:]
+test_y = y[34171:]
+
+
 clf1 = SGDClassifier(loss='modified_huber', penalty='elasticnet', max_iter=1000, n_jobs=-1,
-                     learning_rate='optimal', alpha=0.0001, class_weight={-1: .507, 0: 0.05, 1: 0.475})
+                    l1_ratio=.15,
+                    learning_rate='optimal', alpha=0.01, class_weight={-1: .34, 0: 0.30, 1: 0.36})
+
 clf1.fit(train_X, train_y)
 
+# Call the prediction method to compare accuracy
 results1_y = clf1.predict(test_X)
 
 # Compare some of the signals generated
 print(results1_y[:50])
 print(test_y[:50])
 
-# Run an accuracy test
 acc1 = accuracy_score(test_y, results1_y)
+# acc2 = accuracy_score(test_y, results2_y)
+# acc3 = accuracy_score(test_y, results3_y)
 
-# Print accuracy
+
 print("Accuracy of model 1:", acc1)
+# print("Accuracy of model 2:", acc2)
+# print("Accuracy of model 3:", acc3)
 
-# If the model is good, dump it to a file to use for trading
-# joblib.dump(clf1, "SVM_Model.pkl")
+# joblib.dump(clf1, "SVM_Model_svm4.pkl")
 
-# Generate a confustion Matrix to better understand what is being correctly classified and
-# incorrectly classified
 mat = confusion_matrix(test_y, results1_y)
 
-# Print results to a graph
 sns.heatmap(mat, square=True, annot=True, cbar=False) #, cmap='YlGnBu', flag, YlGnBu, jet
 plt.xlabel('predicted value')
 plt.ylabel('true value')
 
 plt.show()
-

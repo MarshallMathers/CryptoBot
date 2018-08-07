@@ -26,10 +26,12 @@ def initialize(context):
     # Context.asset is used to reference price values
     context.asset = symbol('btc_usd')
     context.base_price = None
+
+    # Keeps track of investments
     context.stakeInMarket = 0.0
 
     # Context.model loads in the pre-trained SVM model that will be making the predictions
-    context.model = joblib.load('SVM_Model.pkl')
+    context.model = joblib.load('SVM_Model_svm5.pkl')
     context.tradeWindow = 1
 
 
@@ -64,15 +66,31 @@ def handle_data(context, data):
     #########################################################
 
     rsi_s = ta.momentum.rsi(close, n=9)
-    tsi_s = ta.momentum.tsi(close, r=14, s=9)
+    tsi_s = ta.momentum.tsi(close, r=12, s=9)
 
-    rsi_l = ta.momentum.rsi(close, n=14)
-    tsi_l = ta.momentum.tsi(close, r=25, s=13)
+    rsi_m = ta.momentum.rsi(close, n=12)
+    tsi_m = ta.momentum.tsi(close, r=15, s=9)
 
-    mfi = ta.momentum.money_flow_index(high, low, close, volume, n=14)
+    rsi_m2 = ta.momentum.rsi(close, n=15)
+    tsi_m2 = ta.momentum.tsi(close, r=18, s=12)
 
-    bband_high = ta.volatility.bollinger_hband_indicator(close, n=20)
-    bband_low = ta.volatility.bollinger_lband_indicator(close, n=20)
+    rsi_l = ta.momentum.rsi(close, n=24)
+    tsi_l = ta.momentum.tsi(close, r=27, s=18)
+
+    rsi_el = ta.momentum.rsi(close, n=30)
+    tsi_el = ta.momentum.tsi(close, r=35, s=25)
+
+    mfi_s = ta.momentum.money_flow_index(high, low, close, volume, n=9)
+    mfi_m = ta.momentum.money_flow_index(high, low, close, volume, n=15)
+    mfi_l = ta.momentum.money_flow_index(high, low, close, volume, n=24)
+
+    bband_h_s = ta.volatility.bollinger_hband_indicator(close, n=12)
+    bband_h_m = ta.volatility.bollinger_hband_indicator(close, n=18)
+    bband_h_l = ta.volatility.bollinger_hband_indicator(close, n=26)
+
+    bband_l_s = ta.volatility.bollinger_lband_indicator(close, n=12)
+    bband_l_m = ta.volatility.bollinger_lband_indicator(close, n=18)
+    bband_l_l = ta.volatility.bollinger_lband_indicator(close, n=26)
 
     # If base_price is not set, we use the current value. This is the
     # price at the first bar which we reference to calculate price_change.
@@ -87,8 +105,6 @@ def handle_data(context, data):
     # Prints the amount of time elapsed every 6 hours
     if context.i % 360 == 0:
         print((context.i / 1440), "Days passed.")
-        #print("Tsi value:", tsi_long[-1])
-        #print("EMA_Bol value is:", tsiEMA_HBol[-1])
 
     # Save values for later inspection
     record(price=price,
@@ -96,12 +112,18 @@ def handle_data(context, data):
            cash=cash,
            price_change=price_change,
            rsi_s=rsi_s[-1],
+           rsi_m=rsi_m[-1],
+           rsi_m2=rsi_m2[-1],
            rsi_l=rsi_l[-1],
+           rsi_el=rsi_el[-1],
            tsi_s=tsi_s[-1],
+           tsi_m=tsi_m[-1],
+           tsi_m2=tsi_m2[-1],
            tsi_l=tsi_l[-1],
-           mfi=mfi[-1],
-           bband_h=bband_high[-1],
-           bband_l=bband_low[-1],
+           tsi_el=tsi_el[-1],
+           mfi_s=mfi_s[-1],
+           bband_h=bband_h_s[-1],
+           bband_l=bband_l_s[-1],
            )
 
     # Since we are using limit orders, some orders may not execute immediately
@@ -118,21 +140,25 @@ def handle_data(context, data):
     pos_amount = context.portfolio.positions[context.asset].amount
 
     # Call the splitAndCompress function so that we can pass the current data to the SVM to give a prediction
-    totalData = functions.splitAndCompress_noPrice(rsi_s[-60:], tsi_s[-60:], rsi_l[-60:], tsi_l[-60:],
-                                                   mfi[-60:], bband_low[-60:], bband_high[-60:])
+    totalData = functions.splitAndCompress_Massive(rsi_s[-120:], rsi_m[-120:], rsi_m2[-120:], rsi_l[-120:], rsi_el[-120:],
+                                                   tsi_s[-120:], tsi_m[-120:], tsi_m2[-120:], tsi_l[-120:], tsi_el[-120:],
+                                                   mfi_s[-120:], mfi_m[-120:], mfi_l[-120:],
+                                                   bband_l_s[-120:], bband_l_m[-120:], bband_l_l[-120:],
+                                                   bband_h_s[-120:], bband_h_m[-120:], bband_h_l[-120:])
 
     # Call the prediction
     prediction = context.model.predict(totalData[-1:])
-    if context.i % 180 == 0:
+
+    # If 2 hours has elapsed since the last trade, check the prediction and trade accordingly
+    if context.i % 120 == 0:
         # If the prediction is a buy, check that we aren't invested already
         if prediction[0] == 1 and pos_amount == 0:
             order_target_percent(context.asset, 1)
-            print("Bought at:", pos_amount * price)
+            print("Bought at:", price)
         # If the prediction is a sell, check if we are invested
         if prediction[0] == -1 and pos_amount > 0:
             order_target_percent(context.asset, 0)
-            print("Sold at:", pos_amount * price)
-
+            print("Sold at:", price)
 
 
 def analyze(context, perf):
@@ -190,6 +216,7 @@ def analyze(context, perf):
     ax3.set_ylabel('Percent Change')
     start, end = ax3.get_ylim()
     ax3.yaxis.set_ticks(np.arange(start, end, (end - start) / 5))
+
 
     plt.show()
 
